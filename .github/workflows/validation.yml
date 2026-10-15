@@ -1,0 +1,252 @@
+name: Auvemir private platform validation
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Platforms to validate
+        type: choice
+        default: all
+        options: [all, linux, windows, apple, android, source]
+permissions:
+  contents: read
+concurrency:
+  group: auvemir-private-validation
+  cancel-in-progress: false
+env:
+  CARGO_BUILD_JOBS: '2'
+  MACOSX_DEPLOYMENT_TARGET: '13.0'
+jobs:
+  native:
+    if: contains(fromJSON('["all","linux","windows","apple"]'), inputs.target)
+    name: Native ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(inputs.target == 'linux' && '[{"os":"ubuntu-24.04","name":"linux-x86_64"},{"os":"ubuntu-24.04-arm","name":"linux-arm64"}]' || inputs.target == 'windows' && '[{"os":"windows-2025","name":"windows-x86_64"}]' || inputs.target == 'apple' && '[{"os":"macos-15","name":"apple-arm64"},{"os":"macos-15-intel","name":"macos-x86_64"}]' || '[{"os":"ubuntu-24.04","name":"linux-x86_64"},{"os":"ubuntu-24.04-arm","name":"linux-arm64"},{"os":"windows-2025","name":"windows-x86_64"},{"os":"macos-15","name":"apple-arm64"},{"os":"macos-15-intel","name":"macos-x86_64"}]') }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+        working-directory: source/Auvemir
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Extract reviewed source checkpoint
+        working-directory: .
+        run: python ci-unpack.py
+      - name: Linux dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y cmake clang libclang-dev pkg-config libasound2-dev libfontconfig1-dev libxkbcommon-dev libx11-dev rpm rpm2cpio zstd cpio ffmpeg fonts-dejavu-core
+      - name: Apple dependencies
+        if: runner.os == 'macOS'
+        run: |
+          brew install cmake ffmpeg
+          auvemir_clang="$(xcrun --find clang)"
+          auvemir_clang_lib="${auvemir_clang%/bin/clang}/lib"
+          if [[ ! -f "$auvemir_clang_lib/libclang.dylib" ]]; then brew install llvm; auvemir_clang_lib="$(brew --prefix llvm)/lib"; fi
+          echo "LIBCLANG_PATH=$auvemir_clang_lib" >> "$GITHUB_ENV"
+      - name: Windows dependencies
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install llvm nsis ffmpeg -y --no-progress
+          "LIBCLANG_PATH=C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Rust toolchain
+        run: rustup toolchain install 1.99.0 --profile minimal --component rustfmt --component clippy
+      - name: Source format, Clippy and regression tests
+        run: |
+          cargo +1.99.0 fmt --all --check
+          cargo +1.99.0 clippy --locked --workspace --all-targets -- -D warnings
+          cargo +1.99.0 test --locked --workspace
+      - name: Compile native release
+        if: runner.os != 'Windows'
+        run: cargo +1.99.0 build --locked --release -p auvemir -j 2
+      - name: Linux codec and package verification
+        if: runner.os == 'Linux'
+        run: |
+          python tests/verify_codecs.py target/release/auvemir --extended --report docs/linux-codecs-current.json
+          python packaging/build_linux.py portable
+          python packaging/build_linux.py deb
+          python packaging/build_linux.py rpm
+          python packaging/build_linux.py arch
+          python packaging/build_appimage.py
+          python tests/verify_packages.py
+      - name: Windows native executable, installer and codecs
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          python packaging/build_windows.py --makensis 'C:\Program Files (x86)\NSIS\makensis.exe'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python tests/verify_codecs.py target/x86_64-pc-windows-msvc/release/auvemir.exe --extended --report docs/windows-codecs-current.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: macOS codecs and application packages
+        if: runner.os == 'macOS'
+        run: |
+          python tests/verify_codecs.py target/release/auvemir --extended --report docs/macos-codecs-current.json
+          bash packaging/build_macos.sh
+      - name: iOS device and simulator packages
+        if: matrix.name == 'apple-arm64'
+        run: |
+          bash packaging/build_ios.sh --device
+          bash packaging/build_ios.sh --simulator
+          python tests/verify_ios_simulator.py dist/ios-simulator/Payload/Auvemir.app
+          plutil -lint dist/ios/Payload/Auvemir.app/Info.plist
+          codesign --verify --deep --strict dist/ios/Payload/Auvemir.app
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: auvemir-${{ matrix.name }}
+          retention-days: 1
+          path: |
+            source/Auvemir/dist/*.zip
+            source/Auvemir/dist/*.exe
+            source/Auvemir/dist/*.dmg
+            source/Auvemir/dist/*.ipa
+            source/Auvemir/dist/*.deb
+            source/Auvemir/dist/*.rpm
+            source/Auvemir/dist/*.pkg.tar.zst
+            source/Auvemir/dist/*.tar.gz
+            source/Auvemir/dist/*.AppImage
+            source/Auvemir/dist/SHA256SUMS
+            source/Auvemir/dist/appimage-tooling.json
+            source/Auvemir/docs/*results*.json
+            source/Auvemir/docs/validation-source.json
+            source/Auvemir/docs/*codecs*.json
+            source/Auvemir/docs/ios-simulator.png
+  android:
+    if: inputs.target == 'all' || inputs.target == 'android'
+    name: Android ${{ matrix.arch }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [arm64, x86_64]
+    defaults:
+      run:
+        working-directory: source/Auvemir
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Extract reviewed source checkpoint
+        working-directory: .
+        run: python ci-unpack.py
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Native dependencies and Rust
+        run: |
+          sudo apt-get update && sudo apt-get install -y cmake clang libclang-dev pkg-config
+          rustup toolchain install 1.99.0 --profile minimal
+          case '${{ matrix.arch }}' in
+            arm64) rustup target add aarch64-linux-android ;;
+            x86_64) rustup target add x86_64-linux-android ;;
+          esac
+      - name: Android SDK
+        run: |
+          sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0' 'ndk;29.0.14206865'
+          echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/29.0.14206865" >> "$GITHUB_ENV"
+      - name: Focus policy regression checks
+        run: |
+          mkdir -p target/android-host-tests
+          javac --release 8 -d target/android-host-tests platforms/android/java/org/auvemir/app/FocusState.java platforms/android/tests/FocusStateTest.java
+          java -cp target/android-host-tests org.auvemir.app.FocusStateTest
+      - name: Compile, sign and inspect native APK
+        run: python packaging/build_android.py --arch '${{ matrix.arch }}'
+      - name: Separate instrumentation package
+        if: matrix.arch == 'x86_64'
+        run: python packaging/build_android_smoke.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: auvemir-android-${{ matrix.arch }}
+          retention-days: 1
+          path: |
+            source/Auvemir/dist/*.apk
+            source/Auvemir/docs/android-${{ matrix.arch }}-build-results.json
+            source/Auvemir/target/android-smoke/Auvemir-tests.apk
+  android-runtime:
+    name: Android API ${{ matrix.api }} runtime
+    needs: android
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {api: 28, tag: default}
+          - {api: 35, tag: google_apis}
+    defaults:
+      run:
+        working-directory: source/Auvemir
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Extract reviewed source checkpoint
+        working-directory: .
+        run: python ci-unpack.py
+      - uses: actions/download-artifact@v4
+        with:
+          name: auvemir-android-x86_64
+          path: runtime-input
+      - name: Emulator image and KVM access
+        run: |
+          sdkmanager --install 'emulator' 'system-images;android-${{ matrix.api }};${{ matrix.tag }};x86_64'
+          sudo chown "$USER" /dev/kvm
+      - name: Exercise actual native playback, focus, screen replacement and capture notifications
+        run: |
+          python tests/run_android_smoke.py --api '${{ matrix.api }}' --image-tag '${{ matrix.tag }}' --accel on --apk "$GITHUB_WORKSPACE/runtime-input/dist/Auvemir-android-x86_64-development.apk" --tests "$GITHUB_WORKSPACE/runtime-input/target/android-smoke/Auvemir-tests.apk" --build-report "$GITHUB_WORKSPACE/runtime-input/docs/android-x86_64-build-results.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: auvemir-android-runtime-api-${{ matrix.api }}
+          retention-days: 1
+          path: |
+            source/Auvemir/docs/android-runtime-results.json
+            source/Auvemir/docs/phone-runtime.png
+            source/Auvemir/target/android-runtime/*.txt
+            source/Auvemir/target/android-runtime/*.log
+  corresponding-source:
+    if: inputs.target == 'all' || inputs.target == 'source'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: source/Auvemir
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Extract reviewed source checkpoint
+        working-directory: .
+        run: python ci-unpack.py
+      - name: Exact locked dependency source, licenses and offline configuration
+        run: |
+          rustup toolchain install 1.99.0 --profile minimal
+          cargo +1.99.0 vendor --locked vendor > vendor-config.toml
+          mkdir -p .cargo dist
+          mv vendor-config.toml .cargo/config.toml
+          tar --exclude='./target' --exclude='./dist' --exclude='./.git' -czf dist/Auvemir-Corresponding-Source.tar.gz .
+          gzip -t dist/Auvemir-Corresponding-Source.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: auvemir-corresponding-source
+          retention-days: 1
+          path: source/Auvemir/dist/Auvemir-Corresponding-Source.tar.gz
