@@ -154,7 +154,7 @@ jobs:
           esac
       - name: Android SDK
         run: |
-          sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0' 'ndk;29.0.14206865'
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install 'platforms;android-36' 'build-tools;36.0.0' 'ndk;29.0.14206865'
           echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/29.0.14206865" >> "$GITHUB_ENV"
       - name: Focus policy regression checks
         run: |
@@ -205,7 +205,7 @@ jobs:
           path: runtime-input
       - name: Emulator image and KVM access
         run: |
-          sdkmanager --install 'emulator' 'system-images;android-${{ matrix.api }};${{ matrix.tag }};x86_64'
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install 'emulator' 'system-images;android-${{ matrix.api }};${{ matrix.tag }};x86_64'
           sudo chown "$USER" /dev/kvm
       - name: Exercise actual native playback, focus, screen replacement and capture notifications
         run: |
