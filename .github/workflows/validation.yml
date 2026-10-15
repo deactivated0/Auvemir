@@ -114,6 +114,8 @@ jobs:
             source/Auvemir/dist/*.AppImage
             source/Auvemir/dist/SHA256SUMS
             source/Auvemir/dist/appimage-tooling.json
+            source/Auvemir/target/release/auvemir
+            source/Auvemir/target/x86_64-pc-windows-msvc/release/auvemir.exe
             source/Auvemir/docs/*results*.json
             source/Auvemir/docs/validation-source.json
             source/Auvemir/docs/*codecs*.json
@@ -184,7 +186,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {api: 28, tag: default}
+          - {api: 28, tag: google_apis}
           - {api: 35, tag: google_apis}
     defaults:
       run:
