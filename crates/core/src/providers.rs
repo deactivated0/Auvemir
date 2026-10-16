@@ -15,26 +15,32 @@ impl Providers {
             client: crate::network::client(false)?,
         })
     }
-    pub async fn radio(&self, search: &str) -> Result<Vec<Station>> {
-        // Fail over among directory servers; playback itself is independent.
+    pub async fn radio_search(&self, name: &str, country: &str, tag: &str) -> Result<Vec<Station>> {
         let mut last = None;
         for host in [
             "de1.api.radio-browser.info",
             "nl1.api.radio-browser.info",
             "at1.api.radio-browser.info",
         ] {
-            let response = self
+            let mut req = self
                 .client
                 .get(format!("https://{host}/json/stations/search"))
                 .query(&[
-                    ("name", search),
                     ("limit", "100"),
                     ("hidebroken", "true"),
                     ("order", "votes"),
                     ("reverse", "true"),
-                ])
-                .send()
-                .await;
+                ]);
+            if !name.trim().is_empty() {
+                req = req.query(&[("name", name.trim())]);
+            }
+            if !country.trim().is_empty() {
+                req = req.query(&[("country", country.trim())]);
+            }
+            if !tag.trim().is_empty() {
+                req = req.query(&[("tag", tag.trim())]);
+            }
+            let response = req.send().await;
             match response {
                 Ok(r) if r.status().is_success() => {
                     let raw: Vec<RadioRecord> = r.json().await?;
@@ -63,6 +69,86 @@ impl Providers {
             last.unwrap_or_else(|| "Radio directory unavailable".into())
         )
     }
+    pub async fn radio(&self, search: &str) -> Result<Vec<Station>> {
+        let s = search.trim();
+        if let Some(country) = s.strip_prefix("country:") {
+            self.radio_search("", country, "").await
+        } else if let Some(tag) = s.strip_prefix("tag:") {
+            self.radio_search("", "", tag).await
+        } else {
+            self.radio_search(s, "", "").await
+        }
+    }
+    pub async fn radio_countries(&self) -> Result<Vec<(String, u64)>> {
+        let mut last = None;
+        for host in [
+            "de1.api.radio-browser.info",
+            "nl1.api.radio-browser.info",
+            "at1.api.radio-browser.info",
+        ] {
+            let response = self
+                .client
+                .get(format!("https://{host}/json/countries"))
+                .query(&[
+                    ("order", "stationcount"),
+                    ("reverse", "true"),
+                    ("limit", "100"),
+                ])
+                .send()
+                .await;
+            match response {
+                Ok(r) if r.status().is_success() => {
+                    let raw: Vec<RadioCountRecord> = r.json().await?;
+                    return Ok(raw
+                        .into_iter()
+                        .filter(|c| !c.name.trim().is_empty())
+                        .map(|c| (c.name, c.stationcount))
+                        .collect());
+                }
+                Ok(r) => last = Some(format!("Radio countries: HTTP {}", r.status())),
+                Err(e) => last = Some(e.to_string()),
+            }
+        }
+        bail!(
+            "{}",
+            last.unwrap_or_else(|| "Radio directory unavailable".into())
+        )
+    }
+    pub async fn radio_tags(&self) -> Result<Vec<(String, u64)>> {
+        let mut last = None;
+        for host in [
+            "de1.api.radio-browser.info",
+            "nl1.api.radio-browser.info",
+            "at1.api.radio-browser.info",
+        ] {
+            let response = self
+                .client
+                .get(format!("https://{host}/json/tags"))
+                .query(&[
+                    ("order", "stationcount"),
+                    ("reverse", "true"),
+                    ("limit", "100"),
+                ])
+                .send()
+                .await;
+            match response {
+                Ok(r) if r.status().is_success() => {
+                    let raw: Vec<RadioCountRecord> = r.json().await?;
+                    return Ok(raw
+                        .into_iter()
+                        .filter(|t| !t.name.trim().is_empty())
+                        .map(|t| (t.name, t.stationcount))
+                        .collect());
+                }
+                Ok(r) => last = Some(format!("Radio tags: HTTP {}", r.status())),
+                Err(e) => last = Some(e.to_string()),
+            }
+        }
+        bail!(
+            "{}",
+            last.unwrap_or_else(|| "Radio directory unavailable".into())
+        )
+    }
     pub async fn books(&self, search: &str) -> Result<Vec<CatalogBook>> {
         let mut url = url::Url::parse("https://librivox.org/api/feed/audiobooks/")?;
         url.query_pairs_mut().extend_pairs([
@@ -71,9 +157,12 @@ impl Providers {
             ("coverart", "1"),
             ("sort_order", "desc"),
         ]);
-        if !search.trim().is_empty() {
+        let s = search.trim();
+        if let Some(genre_id) = s.strip_prefix("genre:") {
+            url.query_pairs_mut().append_pair("genre_id", genre_id.trim());
+        } else if !s.is_empty() {
             url.query_pairs_mut()
-                .append_pair("title", &format!("^{}", search.trim()));
+                .append_pair("title", &format!("^{}", s));
         }
         let r = self.client.get(url).send().await?.error_for_status()?;
         let catalog: BookResponse = r.json().await?;
@@ -105,9 +194,14 @@ impl Providers {
         parse_feed(&bytes, url, kind)
     }
     pub async fn podcasts(&self, search: &str) -> Result<Vec<CatalogBook>> {
+        let term = if search.trim().is_empty() {
+            "podcast"
+        } else {
+            search.trim()
+        };
         let mut url = url::Url::parse("https://itunes.apple.com/search")?;
         url.query_pairs_mut().extend_pairs([
-            ("term", search),
+            ("term", term),
             ("media", "podcast"),
             ("entity", "podcast"),
             ("limit", "50"),
@@ -171,6 +265,56 @@ struct RadioRecord {
     tags: String,
     #[serde(default)]
     favicon: String,
+}
+#[derive(Deserialize)]
+struct RadioCountRecord {
+    name: String,
+    #[serde(default)]
+    stationcount: u64,
+}
+
+pub fn book_genres() -> &'static [(&'static str, &'static str)] {
+    &[
+        ("20", "Literary Fiction"),
+        ("1", "Action & Adventure"),
+        ("4", "Children's Fiction"),
+        ("6", "Crime & Mystery"),
+        ("16", "Historical Fiction"),
+        ("25", "Poetry"),
+        ("27", "Romance"),
+        ("30", "Science Fiction"),
+        ("31", "Short Stories"),
+        ("32", "Suspense & Thrillers"),
+        ("56", "Biography & Autobiography"),
+        ("67", "History"),
+        ("79", "Philosophy"),
+        ("84", "Science"),
+        ("87", "Travel & Exploration"),
+        ("101", "Humor"),
+        ("107", "Mythology & Fairy Tales"),
+        ("123", "Plays & Drama"),
+    ]
+}
+
+pub fn podcast_genres() -> &'static [&'static str] {
+    &[
+        "News",
+        "Technology",
+        "Comedy",
+        "True Crime",
+        "Business",
+        "Science",
+        "History",
+        "Sports",
+        "Health & Fitness",
+        "Society & Culture",
+        "Arts",
+        "Education",
+        "Music",
+        "Fiction",
+        "Kids & Family",
+        "TV & Film",
+    ]
 }
 #[derive(Deserialize)]
 struct BookResponse {
@@ -332,4 +476,20 @@ pub fn import_opml(text: &str) -> Result<Vec<String>> {
     urls.sort();
     urls.dedup();
     Ok(urls)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_genres_defined() {
+        let books = book_genres();
+        assert!(!books.is_empty());
+        assert!(books.iter().any(|(id, name)| *id == "30" && *name == "Science Fiction"));
+
+        let podcasts = podcast_genres();
+        assert!(!podcasts.is_empty());
+        assert!(podcasts.contains(&"Technology"));
+    }
 }

@@ -66,6 +66,7 @@ enum Command {
     Scanned(auvemir_core::library::Scanned),
     Catalog(Vec<CatalogBook>),
     Stations(Vec<Station>),
+    Collections(Vec<(String, String, String)>),
     Feed(String, String, MediaKind, Vec<Media>),
     Prepared(u64, Media, u64, Prepared),
     PrepareFailed(u64, String),
@@ -1216,6 +1217,22 @@ impl Worker {
                 self.collections.clear();
                 self.playlist_filter = None;
                 self.refresh()?;
+                if p == 5 {
+                    if let Ok(providers) = self.providers() {
+                        self.status = "Loading popular radio stations…".into();
+                        self.job(async move { Ok(Command::Stations(providers.radio("").await?)) });
+                    }
+                } else if p == 3 {
+                    if let Ok(providers) = self.providers() {
+                        self.status = "Loading LibriVox audiobooks…".into();
+                        self.job(async move { Ok(Command::Catalog(providers.books("").await?)) });
+                    }
+                } else if p == 4 {
+                    if let Ok(providers) = self.providers() {
+                        self.status = "Loading popular podcasts…".into();
+                        self.job(async move { Ok(Command::Catalog(providers.podcasts("").await?)) });
+                    }
+                }
             }
             Command::Play(id) => {
                 if let Some(m) = self.db.get(&id)?
@@ -1429,17 +1446,28 @@ impl Worker {
                     .books
                     .iter()
                     .map(|b| {
+                        let sub = if b.language == "Podcast" {
+                            format!("{} · Podcast", b.author)
+                        } else {
+                            format!("{} · {} · LibriVox", b.author, b.language)
+                        };
                         (
                             format!("book:{}", b.id),
                             b.title.clone(),
-                            format!("{} · {} · LibriVox", b.author, b.language),
+                            sub,
                         )
                     })
                     .collect();
+                self.view_dirty = true;
                 self.status = format!(
                     "{} catalog results. Select an item to load its audio.",
                     self.books.len()
                 );
+            }
+            Command::Collections(cols) => {
+                self.collections = cols;
+                self.view_dirty = true;
+                self.status = format!("{} items. Select one to browse.", self.collections.len());
             }
             Command::Stations(stations) => {
                 self.allow_remote_art = true;
@@ -1694,6 +1722,38 @@ impl Worker {
                     self.status = value;
                 } else if let Some(url) = id.strip_prefix("feed:") {
                     self.handle(Command::Subscribe(url.into(), 4))?;
+                } else if let Some(country) = id.strip_prefix("radio-country:") {
+                    let country = country.to_string();
+                    let p = self.providers()?;
+                    self.status = format!("Loading radio stations for {country}…");
+                    self.collections.clear();
+                    self.job(async move {
+                        Ok(Command::Stations(p.radio(&format!("country:{country}")).await?))
+                    });
+                } else if let Some(tag) = id.strip_prefix("radio-genre:") {
+                    let tag = tag.to_string();
+                    let p = self.providers()?;
+                    self.status = format!("Loading radio stations for genre {tag}…");
+                    self.collections.clear();
+                    self.job(async move {
+                        Ok(Command::Stations(p.radio(&format!("tag:{tag}")).await?))
+                    });
+                } else if let Some(genre_id) = id.strip_prefix("book-genre:") {
+                    let genre_id = genre_id.to_string();
+                    let p = self.providers()?;
+                    self.status = "Loading audiobooks for genre…".into();
+                    self.collections.clear();
+                    self.job(async move {
+                        Ok(Command::Catalog(p.books(&format!("genre:{genre_id}")).await?))
+                    });
+                } else if let Some(genre) = id.strip_prefix("podcast-genre:") {
+                    let genre = genre.to_string();
+                    let p = self.providers()?;
+                    self.status = format!("Loading podcasts for {genre}…");
+                    self.collections.clear();
+                    self.job(async move {
+                        Ok(Command::Catalog(p.podcasts(&genre).await?))
+                    });
                 } else if let Some(id) = id.strip_prefix("book:") {
                     let b = self
                         .books
@@ -2833,6 +2893,64 @@ impl Worker {
                 self.view.clear();
                 self.view_dirty = true;
                 self.status = "Choose a subscription to refresh it.".into();
+            }
+            "radio-top" => {
+                let p = self.providers()?;
+                self.status = "Loading popular radio stations…".into();
+                self.collections.clear();
+                self.job(async move { Ok(Command::Stations(p.radio("").await?)) });
+            }
+            "radio-countries" => {
+                let p = self.providers()?;
+                self.status = "Loading radio countries…".into();
+                self.job(async move {
+                    let countries = p.radio_countries().await?;
+                    let cols = countries
+                        .into_iter()
+                        .map(|(c, count)| (format!("radio-country:{c}"), c, format!("{count} stations")))
+                        .collect();
+                    Ok(Command::Collections(cols))
+                });
+            }
+            "radio-genres" => {
+                let p = self.providers()?;
+                self.status = "Loading radio genres…".into();
+                self.job(async move {
+                    let tags = p.radio_tags().await?;
+                    let cols = tags
+                        .into_iter()
+                        .map(|(t, count)| (format!("radio-genre:{t}"), t, format!("{count} stations")))
+                        .collect();
+                    Ok(Command::Collections(cols))
+                });
+            }
+            "books-top" => {
+                let p = self.providers()?;
+                self.status = "Loading popular LibriVox audiobooks…".into();
+                self.job(async move { Ok(Command::Catalog(p.books("").await?)) });
+            }
+            "books-genres" => {
+                self.collections = auvemir_core::providers::book_genres()
+                    .iter()
+                    .map(|(id, name)| (format!("book-genre:{id}"), (*name).to_string(), "LibriVox genre".to_string()))
+                    .collect();
+                self.view.clear();
+                self.view_dirty = true;
+                self.status = "Choose a genre to browse audiobooks.".into();
+            }
+            "podcasts-top" => {
+                let p = self.providers()?;
+                self.status = "Loading popular podcasts…".into();
+                self.job(async move { Ok(Command::Catalog(p.podcasts("").await?)) });
+            }
+            "podcasts-genres" => {
+                self.collections = auvemir_core::providers::podcast_genres()
+                    .iter()
+                    .map(|name| (format!("podcast-genre:{name}"), (*name).to_string(), "Podcast genre".to_string()))
+                    .collect();
+                self.view.clear();
+                self.view_dirty = true;
+                self.status = "Choose a genre to browse podcasts.".into();
             }
             "pick-files" | "pick-folder" => {
                 let page = self.page;
