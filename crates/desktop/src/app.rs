@@ -804,15 +804,26 @@ impl Worker {
             .collect();
         let mut queue = Queue::default();
         queue.replace(items, cursor);
-        let servers = db
+        let mut servers: Vec<auvemir_core::servers::Server> = db
             .setting("servers")?
             .and_then(|v| serde_json::from_str(&v).ok())
             .unwrap_or_default();
+        if !servers.iter().any(|s| s.protocol == "invidious") {
+            servers.push(auvemir_core::servers::Server {
+                id: "ytmusic".into(),
+                name: "YouTube Music".into(),
+                protocol: "invidious".into(),
+                endpoint: "https://invidious.f5.si/".into(),
+                username: "".into(),
+            });
+        }
         let services = db
             .setting("scrobblers")?
             .and_then(|v| serde_json::from_str(&v).ok())
             .unwrap_or_default();
-        let active_server = db.setting("active-server")?;
+        let active_server = db.setting("active-server")?.or_else(|| {
+            servers.iter().find(|s| s.protocol == "invidious").map(|s| s.id.clone())
+        });
         if let Some(gains) = db
             .setting("equalizer")?
             .and_then(|v| serde_json::from_str::<Vec<f32>>(&v).ok())
@@ -1010,9 +1021,10 @@ impl Worker {
                     .iter()
                     .find(|s| Some(&s.id) == self.active_server.as_ref())
             })
+            .or_else(|| self.servers.iter().find(|s| s.protocol == "invidious"))
             .or_else(|| self.servers.first())
             .cloned()
-            .context("Connect a personal music server in Settings first")?;
+            .context("No online music server available")?;
         let secret = if server.protocol == "invidious" {
             String::new()
         } else {
@@ -1217,7 +1229,9 @@ impl Worker {
                 self.collections.clear();
                 self.playlist_filter = None;
                 self.refresh()?;
-                if p == 5 {
+                if p == 2 {
+                    let _ = self.search_server_page(0, None, None);
+                } else if p == 5 {
                     if let Ok(providers) = self.providers() {
                         self.status = "Loading popular radio stations…".into();
                         self.job(async move { Ok(Command::Stations(providers.radio("").await?)) });
@@ -2924,6 +2938,18 @@ impl Worker {
                     Ok(Command::Collections(cols))
                 });
             }
+            "online-trending" => {
+                self.query.clear();
+                self.search_server_page(0, None, None)?;
+            }
+            "books-local" => {
+                self.collections.clear();
+                self.query.clear();
+                self.playlist_filter = None;
+                self.page = 3;
+                self.refresh()?;
+                self.status = format!("{} local audiobooks in your library.", self.view.len());
+            }
             "books-top" => {
                 let p = self.providers()?;
                 self.status = "Loading popular LibriVox audiobooks…".into();
@@ -4378,8 +4404,8 @@ fn headings(page: i32) -> (&'static str, &'static str) {
     match page {
         1 => ("Local Music", "Your music, available offline."),
         2 => (
-            "Discover",
-            "Online music stays separate from your device library.",
+            "Online Music",
+            "Stream and search songs from YouTube Music.",
         ),
         3 => (
             "Audiobooks",

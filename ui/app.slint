@@ -125,6 +125,7 @@ export component MainWindow inherits Window {
     icon: @image-url("../packaging/icons/auvemir.svg");
     preferred-width: 1180px; preferred-height: 780px; min-width: 360px; min-height: 600px;
     in-out property <int> page: 0;
+    in-out property <int> audiobook-section: 0;
     in property <[TrackRow]> tracks;
     in property <[NamedRow]> collections;
     in property <[NamedRow]> saved-playlists;
@@ -315,44 +316,98 @@ export component MainWindow inherits Window {
                         QuickCard { symbol: "◷"; text: "Recently Played"; triggered => {root.navigate(0);} }
                         QuickCard { symbol: "♬"; text: "Your Mix"; triggered => {root.action("your-mix");} }
                     }
-                    if root.page == 1 || root.page == 3 || root.page == 7 || root.page == 6: HorizontalLayout {
-                        spacing: 7px;
+                    if root.page == 1 || root.page == 7 || root.page == 6: HorizontalLayout {
+                        spacing: 10px;
                         if !root.native-mobile: LineEdit { text <=> root.import-path; placeholder-text: "Path to an audio file or folder"; height: 36px; accepted => {root.import-audio(self.text,root.page);} }
                         Action { text: "Import"; light: true; triggered => {root.import-audio(root.import-path,root.page);} }
                         if !root.mobile: Action { text: "Browse files"; triggered => {root.action("pick-files");} }
                         if !root.mobile: Action { text: "Browse folder"; triggered => {root.action("pick-folder");} }
                     }
-                    if root.page == 1: HorizontalLayout { Action { text: "Tracks"; triggered => {root.navigate(1);} } Action { text: "Albums"; triggered => {root.action("albums");} } Action { text: "Artists"; triggered => {root.action("artists");} } Rectangle {} }
-                    if root.page == 3: HorizontalLayout { Action { text: "Browse books"; triggered => {root.action("books-top");} } Action { text: "Genres"; triggered => {root.action("books-genres");} } Action { text: "My books"; triggered => {root.action("books-groups");} } Action { text: "Current book chapters"; enabled: root.has-embedded-chapters; triggered => {root.action("book-chapters");} } Rectangle {} }
-                    if root.page == 3 || root.page == 4: HorizontalLayout {
-                        LineEdit { text <=> root.feed-url; placeholder-text: root.page == 3 ? "LibriVox audiobook RSS URL" : "Podcast RSS or Atom feed URL"; height: 36px; accepted => {root.subscribe(self.text,root.page);} }
-                        Action { text: root.page == 3 ? "Add book" : "Subscribe"; triggered => {root.subscribe(root.feed-url,root.page);} }
+                    if root.page == 1: HorizontalLayout { spacing: 10px; Action { text: "Tracks"; triggered => {root.navigate(1);} } Action { text: "Albums"; triggered => {root.action("albums");} } Action { text: "Artists"; triggered => {root.action("artists");} } Rectangle {} }
+                    if root.page == 2: HorizontalLayout {
+                        spacing: 10px;
+                        Action { text: "Trending"; triggered => {root.action("online-trending");} }
+                        for c in root.connections: Action { text: c.title; triggered => {root.action("server:"+c.id);} }
+                        Rectangle {}
                     }
-                    if root.page == 5: HorizontalLayout { Action { text: "Top stations"; triggered => {root.action("radio-top");} } Action { text: "Countries"; triggered => {root.action("radio-countries");} } Action { text: "Genres"; triggered => {root.action("radio-genres");} } Rectangle {} }
-                    if root.page == 3 || root.page == 4 || root.page == 5 || root.page == 9: HorizontalLayout {
-                        LineEdit { text <=> root.search-query; placeholder-text: root.page == 3 ? "Find free books on LibriVox" : root.page == 5 ? "Search stations worldwide" : root.page == 4 ? "Discover podcasts" : "Search your local library"; height: 36px; accepted => {root.remote-search(self.text,root.page);} }
+                    if root.page == 2: HorizontalLayout {
+                        spacing: 10px;
+                        LineEdit { text <=> root.search-query; placeholder-text: "Search songs & artists on YouTube Music…"; height: 36px; accepted => {root.remote-search(self.text,2);} }
+                        Action { text: "Search"; triggered => {root.remote-search(root.search-query,2);} }
+                    }
+                    if root.page == 2: HorizontalLayout {
+                        spacing: 10px;
+                        LineEdit { text <=> root.feed-url; placeholder-text: "Direct audio stream URL (https://…/audio.mp3)"; height: 36px; accepted => {root.subscribe(self.text,2);} }
+                        Action { text: "Open stream"; light: true; triggered => {root.subscribe(root.feed-url,2);} }
+                    }
+                    if root.page == 3: HorizontalLayout {
+                        spacing: 10px;
+                        Action { text: "LibriVox Online"; selected: root.audiobook-section == 0; triggered => {root.audiobook-section = 0; root.action("books-top");} }
+                        Action { text: "Genres"; selected: root.audiobook-section == 0 && root.collections.length > 0; triggered => {root.audiobook-section = 0; root.action("books-genres");} }
+                        Action { text: "Local Audiobooks"; selected: root.audiobook-section == 1; triggered => {root.audiobook-section = 1; root.action("books-local");} }
+                        Action { text: "Group by Book"; selected: root.audiobook-section == 1; triggered => {root.audiobook-section = 1; root.action("books-groups");} }
+                        Action { text: "Current book chapters"; enabled: root.has-embedded-chapters; triggered => {root.action("book-chapters");} }
+                        Rectangle {}
+                    }
+                    if root.page == 3 && root.audiobook-section == 0: HorizontalLayout {
+                        spacing: 10px;
+                        LineEdit { text <=> root.search-query; placeholder-text: "Search free books on LibriVox…"; height: 36px; accepted => {root.remote-search(self.text,3);} }
+                        Action { text: "Search"; triggered => {root.remote-search(root.search-query,3);} }
+                    }
+                    if root.page == 3 && root.audiobook-section == 0: HorizontalLayout {
+                        spacing: 10px;
+                        LineEdit { text <=> root.feed-url; placeholder-text: "LibriVox audiobook RSS URL"; height: 36px; accepted => {root.subscribe(self.text,3);} }
+                        Action { text: "Add book"; triggered => {root.subscribe(root.feed-url,3);} }
+                    }
+                    if root.page == 3 && root.audiobook-section == 1: HorizontalLayout {
+                        spacing: 10px;
+                        if !root.native-mobile: LineEdit { text <=> root.import-path; placeholder-text: "Path to local audiobook file or folder"; height: 36px; accepted => {root.import-audio(self.text,3);} }
+                        Action { text: "Import"; light: true; triggered => {root.import-audio(root.import-path,3);} }
+                        if !root.mobile: Action { text: "Browse files"; triggered => {root.action("pick-files");} }
+                        if !root.mobile: Action { text: "Browse folder"; triggered => {root.action("pick-folder");} }
+                    }
+                    if root.page == 4: HorizontalLayout {
+                        spacing: 10px;
+                        Action { text: "Top podcasts"; triggered => {root.action("podcasts-top");} }
+                        Action { text: "Genres"; triggered => {root.action("podcasts-genres");} }
+                        Action { text: "Refresh"; triggered => {root.action("refresh-feeds");} }
+                        Action { text: "Subscriptions"; triggered => {root.action("subscriptions");} }
+                        Action { text: "OPML"; triggered => {root.navigate(11);} }
+                        Rectangle {}
+                    }
+                    if root.page == 4: HorizontalLayout {
+                        spacing: 10px;
+                        LineEdit { text <=> root.feed-url; placeholder-text: "Podcast RSS or Atom feed URL"; height: 36px; accepted => {root.subscribe(self.text,4);} }
+                        Action { text: "Subscribe"; triggered => {root.subscribe(root.feed-url,4);} }
+                    }
+                    if root.page == 4: HorizontalLayout {
+                        spacing: 10px;
+                        LineEdit { text <=> root.search-query; placeholder-text: "Discover podcasts worldwide…"; height: 36px; accepted => {root.remote-search(self.text,4);} }
+                        Action { text: "Search"; triggered => {root.remote-search(root.search-query,4);} }
+                    }
+                    if root.page == 5: HorizontalLayout {
+                        spacing: 10px;
+                        Action { text: "Top stations"; triggered => {root.action("radio-top");} }
+                        Action { text: "Countries"; triggered => {root.action("radio-countries");} }
+                        Action { text: "Genres"; triggered => {root.action("radio-genres");} }
+                        Rectangle {}
+                    }
+                    if root.page == 5 || root.page == 9: HorizontalLayout {
+                        spacing: 10px;
+                        LineEdit { text <=> root.search-query; placeholder-text: root.page == 5 ? "Search stations worldwide" : "Search your local library"; height: 36px; accepted => {root.remote-search(self.text,root.page);} }
                         Action { text: "Search"; triggered => {root.remote-search(root.search-query,root.page);} }
                         if root.page == 5: Action { text: "+ Station"; triggered => {root.station-id="";root.station-name="";root.station-url="";root.station-country="";root.station-language="";root.station-tags="";root.station-logo="";root.radio-editor=true;} }
                     }
-                    if root.page == 2: Rectangle { min-height: 150px; background: #101010; border-radius: 9px;
-                        VerticalLayout { padding: 20px; spacing: 12px;
-                            Text { text: "Your music, everywhere"; color: #fff; font-weight: 700; font-size: 18px; }
-                            Text { text: "Connect Navidrome, Subsonic, Audiobookshelf, WebDAV or Nextcloud in Settings, or open a direct audio stream."; color: #999; wrap: word-wrap; }
-                            HorizontalLayout { LineEdit { text <=> root.search-query; placeholder-text: "Search your music server"; height: 36px; accepted => {root.remote-search(self.text,2);} } Action { text: "Search server"; triggered => {root.remote-search(root.search-query,2);} } }
-                            for c in root.connections: HorizontalLayout { Text { text: c.title; color: #aaa; } if c.subtitle == "subsonic" || c.subtitle == "audiobookshelf" || c.subtitle == "webdav" || c.subtitle == "invidious": Action { text: "Select"; triggered => {root.action("server:"+c.id);} } }
-                            HorizontalLayout { LineEdit { text <=> root.feed-url; placeholder-text: "https://…/audio.mp3"; height: 36px; } Action { text: "Open stream"; light: true; triggered => {root.subscribe(root.feed-url,2);} } }
-                        }
-                    }
-                    if root.page == 4: HorizontalLayout { Action { text: "Top podcasts"; triggered => {root.action("podcasts-top");} } Action { text: "Genres"; triggered => {root.action("podcasts-genres");} } Action { text: "Refresh"; triggered => {root.action("refresh-feeds");} } Action { text: "Subscriptions"; triggered => {root.action("subscriptions");} } Action { text: "OPML"; triggered => {root.navigate(11);} } Rectangle {} }
-                    if root.page == 7: HorizontalLayout { Action { text: root.recording ? "Stop recording" : "Record voice"; light: true; triggered => {root.action("record");} } Rectangle {} }
-                    if root.page == 7 && root.recording: HorizontalLayout { Action { text: root.recording-paused ? "Resume" : "Pause"; triggered => {root.action("record-pause");} } Rectangle { height: 6px; background: #222; Rectangle { width: parent.width*root.recording-level; height: parent.height; background: #eee; } } }
-                    if root.page == 6: HorizontalLayout { Action { text: "White noise"; triggered => {root.action("noise-white");} } Action { text: "Pink noise"; triggered => {root.action("noise-pink");} } Action { text: "Brown noise"; triggered => {root.action("noise-brown");} } Action { text: "Stop"; triggered => {root.action("stop-ambient");} } Rectangle {} }
-                    if root.page == 6: HorizontalLayout { Action { text: "Save mix"; triggered => {root.action("ambient-save");} } Action { text: "Restore mix"; triggered => {root.action("ambient-restore");} } if root.ambient-layers.length > 0: Action { text: root.ambient-playing ? "Pause mix" : "Resume mix"; triggered => {root.action("ambient-toggle");} } Rectangle {} }
-                    if root.page == 6: HorizontalLayout { LineEdit { text <=> root.ambient-preset-name; placeholder-text: "Name this mix"; } Action { text: "Save preset"; triggered => {root.ambient-preset("save", root.ambient-preset-name);} } }
-                    if root.page == 6: VerticalLayout { spacing: 8px; for preset in root.ambient-presets: HorizontalLayout { VerticalLayout { Text { text: preset.title; color: #eee; overflow: elide; } Text { text: preset.subtitle; color: #777; font-size: 11px; } } Action { text: "Restore"; triggered => {root.ambient-preset-name=preset.title;root.ambient-preset("restore",preset.id);} } Action { text: "Delete"; triggered => {root.ambient-preset("delete",preset.id);} } } }
-                    if root.page == 6: VerticalLayout { for layer in root.ambient-layers: HorizontalLayout { Text { text: layer.name; color: #bbb; vertical-alignment: center; } Slider { maximum: 100; value: layer.volume; changed => {root.layer-volume(layer.id,self.value);} } } }
-                    if root.page==7: HorizontalLayout { Action { text: "Rename / tags"; triggered => {root.action("edit-tags");} } Action { text: "Export audio"; triggered => {root.files-action("export-current",root.import-path);} } Rectangle {} }
+                    if root.page == 7: HorizontalLayout { spacing: 10px; Action { text: root.recording ? "Stop recording" : "Record voice"; light: true; triggered => {root.action("record");} } Rectangle {} }
+                    if root.page == 7 && root.recording: HorizontalLayout { spacing: 10px; Action { text: root.recording-paused ? "Resume" : "Pause"; triggered => {root.action("record-pause");} } Rectangle { height: 6px; background: #222; Rectangle { width: parent.width*root.recording-level; height: parent.height; background: #eee; } } }
+                    if root.page == 6: HorizontalLayout { spacing: 10px; Action { text: "White noise"; triggered => {root.action("noise-white");} } Action { text: "Pink noise"; triggered => {root.action("noise-pink");} } Action { text: "Brown noise"; triggered => {root.action("noise-brown");} } Action { text: "Stop"; triggered => {root.action("stop-ambient");} } Rectangle {} }
+                    if root.page == 6: HorizontalLayout { spacing: 10px; Action { text: "Save mix"; triggered => {root.action("ambient-save");} } Action { text: "Restore mix"; triggered => {root.action("ambient-restore");} } if root.ambient-layers.length > 0: Action { text: root.ambient-playing ? "Pause mix" : "Resume mix"; triggered => {root.action("ambient-toggle");} } Rectangle {} }
+                    if root.page == 6: HorizontalLayout { spacing: 10px; LineEdit { text <=> root.ambient-preset-name; placeholder-text: "Name this mix"; } Action { text: "Save preset"; triggered => {root.ambient-preset("save", root.ambient-preset-name);} } }
+                    if root.page == 6: VerticalLayout { spacing: 8px; for preset in root.ambient-presets: HorizontalLayout { spacing: 10px; VerticalLayout { Text { text: preset.title; color: #eee; overflow: elide; } Text { text: preset.subtitle; color: #777; font-size: 11px; } } Action { text: "Restore"; triggered => {root.ambient-preset-name=preset.title;root.ambient-preset("restore",preset.id);} } Action { text: "Delete"; triggered => {root.ambient-preset("delete",preset.id);} } } }
+                    if root.page == 6: VerticalLayout { spacing: 8px; for layer in root.ambient-layers: HorizontalLayout { spacing: 10px; Text { text: layer.name; color: #bbb; vertical-alignment: center; } Slider { maximum: 100; value: layer.volume; changed => {root.layer-volume(layer.id,self.value);} } } }
+                    if root.page == 7: HorizontalLayout { spacing: 10px; Action { text: "Rename / tags"; triggered => {root.action("edit-tags");} } Action { text: "Export audio"; triggered => {root.files-action("export-current",root.import-path);} } Rectangle {} }
                     if root.page == 8: HorizontalLayout {
+                        spacing: 10px;
                         Action { text: "Clear"; triggered => {root.action("clear-queue");} }
                         Action { text: "Shuffle"; triggered => {root.action("shuffle");} }
                         LineEdit { text <=> root.playlist-name; placeholder-text: "Playlist name"; height: 34px; }
@@ -414,13 +469,12 @@ export component MainWindow inherits Window {
                         HorizontalLayout { Action { text: "Save sync"; triggered => {root.configure-sync(root.sync-url,root.sync-user,root.sync-password,root.sync-passphrase);} } Action { text: "Sync now"; triggered => {root.action("sync-now");} } Action { text: "Disconnect"; triggered => {root.action("sync-disconnect");} } Rectangle {} }
                         HorizontalLayout { Action { text: "Import encrypted sync"; triggered => {root.files-action("import-sync",root.import-path);} } Action { text: "Export encrypted sync"; triggered => {root.files-action("export-sync",root.import-path);} } Rectangle {} }
                         Text { text: "Servers and scrobbling"; color: #fff; font-size: 18px; font-weight: 700; }
-                        ComboBox { model: ["Navidrome / Subsonic", "Audiobookshelf", "WebDAV / Nextcloud", "ListenBrainz / Koito", "Last.fm", "Maloja", "Invidious (unofficial)", "Libre.fm"]; current-index <=> root.service-type; }
-                        if root.service-type == 6: Text { text: "Optional unofficial YouTube catalog. Use an instance and content you are authorized to access. Restricted media is not supported."; color: #999; wrap: word-wrap; }
+                        ComboBox { model: ["Navidrome / Subsonic", "Audiobookshelf", "WebDAV / Nextcloud", "ListenBrainz / Koito", "Last.fm", "Maloja", "Libre.fm"]; current-index <=> root.service-type; }
                         LineEdit { text <=> root.service-name; placeholder-text: "Connection name"; height: 36px; }
                         LineEdit { text <=> root.service-url; placeholder-text: "Server base URL, e.g. https://api.listenbrainz.org/"; height: 36px; }
                         LineEdit { text <=> root.service-user; placeholder-text: "Username (music server / WebDAV)"; height: 36px; }
                         LineEdit { text <=> root.service-secret; input-type: password; placeholder-text: "Password or API token; Last.fm: JSON credentials"; height: 36px; }
-                        Action { text: "Save connection"; triggered => {root.configure-service(root.service-type == 0 ? "subsonic" : root.service-type == 1 ? "audiobookshelf" : root.service-type == 2 ? "webdav" : root.service-type == 3 ? "listenbrainz" : root.service-type == 4 ? "lastfm" : root.service-type == 5 ? "maloja" : root.service-type==6 ? "invidious" : "librefm",root.service-name,root.service-url,root.service-user,root.service-secret);} }
+                        Action { text: "Save connection"; triggered => {root.configure-service(root.service-type == 0 ? "subsonic" : root.service-type == 1 ? "audiobookshelf" : root.service-type == 2 ? "webdav" : root.service-type == 3 ? "listenbrainz" : root.service-type == 4 ? "lastfm" : root.service-type == 5 ? "maloja" : "librefm",root.service-name,root.service-url,root.service-user,root.service-secret);} }
                         for c in root.connections: HorizontalLayout { Text { text: c.title + " · " + c.subtitle; color: #aaa; vertical-alignment: center; } Action { text: "Disconnect"; triggered => {root.action("disconnect:"+c.id);} } }
                         LineEdit { text <=> root.playlist-name; placeholder-text: "New playlist name for Rename"; height: 36px; }
                         for p in root.saved-playlists: HorizontalLayout { Text { text: p.title; color: #aaa; vertical-alignment: center; } Action { text: "Rename"; triggered => {root.playlist-action("rename",p.id,root.playlist-name);} } Action { text: "Delete"; triggered => {root.playlist-action("delete",p.id,"");} } }
@@ -428,40 +482,70 @@ export component MainWindow inherits Window {
                         Text { text: "No telemetry. Connections are optional. Enabled scrobblers send listening metadata and retry offline listens; secrets use your operating system's secure storage."; color: #999; wrap: word-wrap; }
                         Text { text: "Auvemir 0.1 · GPL-3.0"; color: #555; }
                     }
-                    for c in root.collections: Rectangle {
-                        height: 62px; border-radius: 7px; background: ct.has-hover ? #191919 : #101010;
-                        HorizontalLayout { padding: 12px; spacing: 12px;
-                            Text { text: "▤"; color: #aaa; width: 30px; font-size: 24px; vertical-alignment: center; }
-                            VerticalLayout { spacing: 4px; Text { text: c.title; color: #fff; overflow: elide; } Text { text: c.subtitle; color: #777; font-size: 11px; overflow: elide; } }
-                            Text { text: "›"; color: #aaa; width: 20px; vertical-alignment: center; }
-                        }
-                        ct := TouchArea { clicked => {root.open-collection(c.id);} }
-                    }
-                    if root.page != 11: Text { text: root.page == 0 ? "Recently Played" : root.page == 8 ? "Playing Queue" : "Your Collection"; color: #fff; font-size: 17px; font-weight: 600; }
-                    if root.tracks.length == 0 && root.collections.length == 0 && root.page != 11: Rectangle { height: 126px; border-width: 1px; border-color: #1d1d1d; border-radius: 9px;
-                        VerticalLayout { padding: 24px; spacing: 12px; Text { text: "A little quiet here"; color: #ddd; font-size: 17px; horizontal-alignment: center; } Text { text: root.page == 0 ? "Play something from your library to see it here." : "Import audio, add a feed, or browse a catalog to begin."; color: #777; wrap: word-wrap; horizontal-alignment: center; } }
-                    }
-                    if !root.mobile && root.tracks.length > 0: HorizontalLayout { Text { text: "TITLE"; color: #555; font-size: 10px; } Text { text: "ALBUM"; color: #555; font-size: 10px; preferred-width: 160px; horizontal-stretch: 0; } Text { text: "TIME"; color: #555; font-size: 10px; width: 66px; } Text { text: ""; width: 76px; } }
-                    for track[i] in root.tracks: Rectangle {
-                        height: root.mobile ? 64px : 58px; border-radius: 5px;
-                        background: track.id == root.current-id ? #1d1d1d : row-touch.has-hover ? #131313 : #000;
-                        HorizontalLayout { spacing: 12px; padding-left: 4px; padding-right: 4px;
-                            Cover { title: track.title; kind: track.kind; artwork: track.artwork; width: 42px; height: 42px; vertical-stretch: 0; }
-                            VerticalLayout { alignment: center; spacing: 4px;
-                                Text { text: track.title; color: #eee; font-size: 13px; overflow: elide; }
-                                Text { text: track.artist + (track.downloaded ? " · Offline" : ""); color: #777; font-size: 11px; overflow: elide; }
+                    if root.collections.length > 0: VerticalLayout {
+                        spacing: 8px;
+                        for c in root.collections: Rectangle {
+                            height: 58px; border-radius: 8px; background: ct.has-hover ? #1c1c1c : #121212;
+                            border-width: 1px; border-color: #242424;
+                            HorizontalLayout { padding-left: 14px; padding-right: 14px; spacing: 14px;
+                                Text { text: "▤"; color: #aaa; width: 24px; font-size: 20px; vertical-alignment: center; }
+                                VerticalLayout { alignment: center; spacing: 3px;
+                                    Text { text: c.title; color: #fff; font-size: 14px; font-weight: 500; overflow: elide; }
+                                    Text { text: c.subtitle; color: #777; font-size: 11px; overflow: elide; }
+                                }
+                                Rectangle { horizontal-stretch: 1; }
+                                Text { text: "›"; color: #888; font-size: 16px; vertical-alignment: center; }
                             }
-                            if !root.mobile: Text { text: track.album; color: #777; font-size: 12px; preferred-width: 160px; horizontal-stretch: 0; overflow: elide; vertical-alignment: center; }
-                            Text { text: track.duration; color: #888; font-size: 11px; width: 58px; vertical-alignment: center; }
-                            Action { text: track.favorite ? "♥" : "♡"; width: 32px; triggered => {root.favorite-track(track.id);} }
-                            if root.page != 8: Action { text: "+"; width: 32px; triggered => {root.action("queue-add:" + track.id);} }
-                            if root.page != 8 && root.page != 5 && !root.mobile: Action { text: "Next"; width: 46px; triggered => {root.action("queue-next:" + track.id);} }
-                            if root.page == 8: Action { text: "↑"; width: 28px; enabled: i > 0; triggered => {root.action("queue-up:" + i);} }
-                            if root.page == 8: Action { text: "↓"; width: 28px; enabled: i + 1 < root.tracks.length; triggered => {root.action("queue-down:" + i);} }
-                            if root.page == 8: Action { text: "×"; width: 32px; triggered => {root.action("queue-remove:" + i);} }
-                            if root.page == 5: Action { text: "⋯"; width: 32px; triggered => {root.edit-station(track.id);root.radio-editor=true;} }
+                            ct := TouchArea { clicked => {root.open-collection(c.id);} }
                         }
-                        row-touch := TouchArea { width: parent.width - (root.page == 8 ? 168px : root.page == 5 ? 132px : !root.mobile ? 146px : 88px); clicked => {root.play-track(track.id);} }
+                    }
+                    if root.page != 11: Text {
+                        text: root.page == 0 ? "Recently Played" :
+                              root.page == 8 ? "Playing Queue" :
+                              root.page == 2 ? "YouTube Music Trending" :
+                              root.page == 3 ? (root.audiobook-section == 1 ? "Local File Audiobooks" : "LibriVox Audiobooks") :
+                              root.page == 5 ? "Radio Stations" :
+                              root.page == 4 ? "Podcasts" :
+                              "Your Collection";
+                        color: #fff; font-size: 17px; font-weight: 600;
+                    }
+                    if root.tracks.length == 0 && root.collections.length == 0 && root.page != 11: Rectangle { height: 126px; border-width: 1px; border-color: #1d1d1d; border-radius: 9px;
+                        VerticalLayout { padding: 24px; spacing: 12px;
+                            Text { text: "A little quiet here"; color: #ddd; font-size: 17px; horizontal-alignment: center; }
+                            Text {
+                                text: root.page == 0 ? "Play something from your library to see it here." :
+                                      root.page == 2 ? "Loading YouTube Music or opening stream…" :
+                                      root.page == 3 && root.audiobook-section == 1 ? "No local file audiobooks found. Use 'Browse files' or 'Browse folder' to add audiobooks." :
+                                      "Import audio, add a feed, or browse a catalog to begin.";
+                                color: #777; wrap: word-wrap; horizontal-alignment: center;
+                            }
+                        }
+                    }
+                    if root.tracks.length > 0: VerticalLayout {
+                        spacing: 4px;
+                        if !root.mobile: HorizontalLayout { Text { text: "TITLE"; color: #555; font-size: 10px; } Text { text: "ALBUM"; color: #555; font-size: 10px; preferred-width: 160px; horizontal-stretch: 0; } Text { text: "TIME"; color: #555; font-size: 10px; width: 66px; } Text { text: ""; width: 76px; } }
+                        for track[i] in root.tracks: Rectangle {
+                            height: root.mobile ? 64px : 58px; border-radius: 6px;
+                            background: track.id == root.current-id ? #1d1d1d : row-touch.has-hover ? #141414 : #070707;
+                            border-width: 1px; border-color: track.id == root.current-id ? #2c2c2c : #131313;
+                            HorizontalLayout { spacing: 12px; padding-left: 6px; padding-right: 6px;
+                                Cover { title: track.title; kind: track.kind; artwork: track.artwork; width: 42px; height: 42px; vertical-stretch: 0; }
+                                VerticalLayout { alignment: center; spacing: 4px;
+                                    Text { text: track.title; color: #eee; font-size: 13px; overflow: elide; }
+                                    Text { text: track.artist + (track.downloaded ? " · Offline" : ""); color: #777; font-size: 11px; overflow: elide; }
+                                }
+                                if !root.mobile: Text { text: track.album; color: #777; font-size: 12px; preferred-width: 160px; horizontal-stretch: 0; overflow: elide; vertical-alignment: center; }
+                                Text { text: track.duration; color: #888; font-size: 11px; width: 58px; vertical-alignment: center; }
+                                Action { text: track.favorite ? "♥" : "♡"; width: 32px; triggered => {root.favorite-track(track.id);} }
+                                if root.page != 8: Action { text: "+"; width: 32px; triggered => {root.action("queue-add:" + track.id);} }
+                                if root.page != 8 && root.page != 5 && !root.mobile: Action { text: "Next"; width: 46px; triggered => {root.action("queue-next:" + track.id);} }
+                                if root.page == 8: Action { text: "↑"; width: 28px; enabled: i > 0; triggered => {root.action("queue-up:" + i);} }
+                                if root.page == 8: Action { text: "↓"; width: 28px; enabled: i + 1 < root.tracks.length; triggered => {root.action("queue-down:" + i);} }
+                                if root.page == 8: Action { text: "×"; width: 32px; triggered => {root.action("queue-remove:" + i);} }
+                                if root.page == 5: Action { text: "⋯"; width: 32px; triggered => {root.edit-station(track.id);root.radio-editor=true;} }
+                            }
+                            row-touch := TouchArea { width: parent.width - (root.page == 8 ? 168px : root.page == 5 ? 132px : !root.mobile ? 146px : 88px); clicked => {root.play-track(track.id);} }
+                        }
                     }
                     if root.tracks.length == 100 || root.page-offset > 0 || root.next-page-enabled: HorizontalLayout { Action { text: "Previous page"; enabled: root.page-offset > 0; triggered => {root.action("page-prev");} } Action { text: "Next page"; enabled: root.next-page-enabled; triggered => {root.action("page-next");} } Rectangle {} }
                     Text { text: root.status; color: #888; wrap: word-wrap; font-size: 12px; }
