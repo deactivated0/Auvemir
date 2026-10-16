@@ -1,0 +1,79 @@
+name: Mobile packages
+on:
+  workflow_dispatch:
+  workflow_call:
+permissions:
+  contents: read
+concurrency:
+  group: mobile-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  android:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [arm64, x86_64]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Native dependencies
+        run: sudo apt-get update && sudo apt-get install -y cmake clang libclang-dev pkg-config
+      - name: Rust toolchain
+        run: rustup toolchain install 1.99.0 --profile minimal
+      - name: Android SDK
+        run: |
+          sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0' 'ndk;29.0.14206865'
+          echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/29.0.14206865" >> "$GITHUB_ENV"
+          case '${{ matrix.arch }}' in
+            arm64) rustup target add aarch64-linux-android ;;
+            x86_64) rustup target add x86_64-linux-android ;;
+          esac
+      - name: Audio focus policy regression checks
+        run: |
+          mkdir -p target/android-host-tests
+          javac --release 8 -d target/android-host-tests platforms/android/java/org/auvemir/app/FocusState.java platforms/android/tests/FocusStateTest.java
+          java -cp target/android-host-tests org.auvemir.app.FocusStateTest
+      - name: Shared application and native host
+        run: python3 packaging/build_android.py --arch '${{ matrix.arch }}'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: auvemir-android-${{ matrix.arch }}
+          path: |
+            dist/*.apk
+            docs/android-${{ matrix.arch }}-build-results.json
+          if-no-files-found: error
+  ios:
+    runs-on: macos-15
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Native dependencies
+        run: |
+          brew install llvm cmake ffmpeg
+          echo "LIBCLANG_PATH=$(brew --prefix llvm)/lib" >> "$GITHUB_ENV"
+      - name: Rust toolchain
+        run: rustup toolchain install 1.99.0 --profile minimal
+      - name: Shared application and UIKit host
+        run: bash packaging/build_ios.sh
+      - name: Build and exercise iOS Simulator
+        run: |
+          bash packaging/build_ios.sh --simulator
+          python3 tests/verify_ios_simulator.py dist/ios-simulator/Payload/Auvemir.app
+      - name: Inspect iOS package
+        run: |
+          plutil -lint dist/ios/Payload/Auvemir.app/Info.plist
+          codesign --verify --deep --strict dist/ios/Payload/Auvemir.app
+          file dist/ios/Payload/Auvemir.app/Auvemir
+      - uses: actions/upload-artifact@v4
+        with:
+          name: auvemir-ios-unsigned
+          path: |
+            dist/*.ipa
+            dist/*simulator.zip
+            docs/ios-*.json
+            docs/ios-simulator.png
+          if-no-files-found: error

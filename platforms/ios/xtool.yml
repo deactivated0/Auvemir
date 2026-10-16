@@ -1,0 +1,4 @@
+version: 1
+bundleID: org.auvemir.app
+infoPath: Info.plist
+iconPath: ../../packaging/icons/auvemir.png

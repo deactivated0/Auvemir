@@ -1,0 +1,28 @@
+{
+  "success": true,
+  "physical_device": false,
+  "system_image": "Android 28 google_apis x86_64",
+  "acceleration": "KVM",
+  "scope": "cold media-browser/native playback, OS audio focus, Activity replacement and microphone pause/resume/finalization",
+  "stage": "completed",
+  "app_process_started": true,
+  "apk_sha256": "17e8e7fe06d4b039c2c7b2646cb7ec9bf0e0e7f1b7b374ee126490baeac19adb",
+  "source_sha256": "8ae8495e49d7a78a0e4f921b02f59bd8be86626e9b3c2fd2c71aa2e4b75e6bb4",
+  "sdk": 28,
+  "steps": [
+    "Cold media-browser startup and real library import passed",
+    "Headless native playback advanced",
+    "MediaSession pause and resume passed",
+    "Android transient audio focus paused and resumed native playback",
+    "Explicit user pause prevented automatic audio-focus resume",
+    "Playback survived Activity destruction",
+    "A replacement Activity reattached without resetting playback",
+    "Notification actions paused, released, reopened and finalized a new microphone WAV",
+    "Ambient-only media controls and focus resume preserved the paused primary track",
+    "Actual Android UI screenshot captured"
+  ],
+  "emulator_system_ui_dialog_observed": false,
+  "error": "",
+  "emulator_system_ui_unresponsive": false,
+  "full_ui_interaction_validated": false
+}

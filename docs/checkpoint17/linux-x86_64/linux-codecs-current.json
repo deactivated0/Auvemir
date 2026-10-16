@@ -1,0 +1,100 @@
+[
+  {
+    "format": "wav",
+    "result": "pass",
+    "fixture_encoder": "pcm_s16le",
+    "decoded_seconds": 1.0,
+    "output": "Decoded 44100 samples \u00b7 1 channels \u00b7 44100 Hz"
+  },
+  {
+    "format": "flac",
+    "result": "pass",
+    "fixture_encoder": "flac",
+    "decoded_seconds": 1.0,
+    "output": "Decoded 44100 samples \u00b7 1 channels \u00b7 44100 Hz"
+  },
+  {
+    "format": "mp3",
+    "result": "pass",
+    "fixture_encoder": "libmp3lame",
+    "decoded_seconds": 1.0,
+    "output": "Decoded 44100 samples \u00b7 1 channels \u00b7 44100 Hz"
+  },
+  {
+    "format": "ogg",
+    "result": "pass",
+    "fixture_encoder": "libvorbis",
+    "decoded_seconds": 1.011519,
+    "output": "Decoded 44608 samples \u00b7 1 channels \u00b7 44100 Hz"
+  },
+  {
+    "format": "m4a",
+    "result": "pass",
+    "fixture_encoder": "aac",
+    "decoded_seconds": 1.044898,
+    "output": "Decoded 46080 samples \u00b7 1 channels \u00b7 44100 Hz"
+  },
+  {
+    "format": "aac",
+    "result": "pass",
+    "fixture_encoder": "aac",
+    "decoded_seconds": 1.044898,
+    "output": "Decoded 46080 samples \u00b7 1 channels \u00b7 44100 Hz"
+  },
+  {
+    "format": "alac.m4a",
+    "result": "pass",
+    "fixture_encoder": "alac",
+    "decoded_seconds": 1.0,
+    "output": "Decoded 44100 samples \u00b7 1 channels \u00b7 44100 Hz"
+  },
+  {
+    "format": "aiff",
+    "result": "pass",
+    "fixture_encoder": "pcm_s16be",
+    "decoded_seconds": 1.0,
+    "output": "Decoded 44100 samples \u00b7 1 channels \u00b7 44100 Hz"
+  },
+  {
+    "format": "mp2",
+    "result": "pass",
+    "fixture_encoder": "mp2",
+    "decoded_seconds": 1.018776,
+    "output": "Decoded 44928 samples \u00b7 1 channels \u00b7 44100 Hz"
+  },
+  {
+    "format": "opus",
+    "result": "pass",
+    "fixture_encoder": "libopus",
+    "decoded_seconds": 1.0,
+    "output": "Decoded 48000 samples \u00b7 1 channels \u00b7 48000 Hz"
+  },
+  {
+    "format": "wma1.wma",
+    "result": "pass",
+    "fixture_encoder": "wmav1",
+    "decoded_seconds": 0.97525,
+    "output": "Decoded 93624 samples \u00b7 2 channels \u00b7 48000 Hz"
+  },
+  {
+    "format": "wma",
+    "result": "pass",
+    "fixture_encoder": "wmav2",
+    "decoded_seconds": 0.97525,
+    "output": "Decoded 93624 samples \u00b7 2 channels \u00b7 48000 Hz"
+  },
+  {
+    "format": "wv",
+    "result": "pass",
+    "fixture_encoder": "wavpack",
+    "decoded_seconds": 1.0,
+    "output": "Decoded 96000 samples \u00b7 2 channels \u00b7 48000 Hz"
+  },
+  {
+    "format": "caf",
+    "result": "pass",
+    "fixture_encoder": "pcm_s16le",
+    "decoded_seconds": 1.0,
+    "output": "Decoded 44100 samples \u00b7 1 channels \u00b7 44100 Hz"
+  }
+]

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>org.auvemir.Auvemir</id>
+  <name>Auvemir</name>
+  <summary>Music, books, podcasts and radio in one native player</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-only</project_license>
+  <description><p>Auvemir is a native Rust and Slint player with a local library, personal music servers, free audiobooks, podcasts, radio, ambient mixing and recordings.</p></description>
+  <launchable type="desktop-id">auvemir.desktop</launchable>
+  <provides><binary>auvemir</binary></provides>
+  <content_rating type="oars-1.1"/>
+</component>

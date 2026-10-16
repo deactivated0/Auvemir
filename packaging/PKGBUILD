@@ -1,0 +1,21 @@
+pkgname=auvemir
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='Native music and spoken-audio player'
+arch=('x86_64' 'aarch64')
+license=('GPL-3.0-only')
+depends=('alsa-lib' 'fontconfig' 'freetype2' 'libxkbcommon' 'libx11' 'gcc-libs')
+makedepends=('rust' 'cmake' 'clang' 'pkgconf')
+optdepends=('ffmpeg: extended audio codecs' 'xdg-desktop-portal: native file picker')
+# Run from a reviewed source checkout; release maintainers add immutable source/checksum URLs.
+build() {
+  cd "$startdir/.."
+  cargo build --locked --release -p auvemir
+}
+package() {
+  cd "$startdir/.."
+  install -Dm755 target/release/auvemir "$pkgdir/usr/bin/auvemir"
+  install -Dm644 packaging/auvemir.desktop "$pkgdir/usr/share/applications/auvemir.desktop"
+  install -Dm644 packaging/icons/auvemir.svg "$pkgdir/usr/share/icons/hicolor/scalable/apps/auvemir.svg"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/auvemir/LICENSE"
+}

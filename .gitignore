@@ -1,0 +1,15 @@
+/target/
+/dist/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.part
+.DS_Store
+
+
+/vendor/
+__pycache__/
+*.pyc
+platforms/ios/.build/
+platforms/ios/.swiftpm/
+platforms/ios/xtool/

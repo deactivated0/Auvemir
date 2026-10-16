@@ -1,0 +1,29 @@
+{
+  "samples": [
+    {
+      "first_sync_ms": 232.695579,
+      "snapshot_blake3": "bece7879887ea4490874d7a77029e09044312fa049839c837a4ac8cc64a0de80",
+      "steady_sync_ms": 143.26050500000002,
+      "tracks": 5000
+    },
+    {
+      "first_sync_ms": 192.577696,
+      "snapshot_blake3": "bece7879887ea4490874d7a77029e09044312fa049839c837a4ac8cc64a0de80",
+      "steady_sync_ms": 146.79826300000002,
+      "tracks": 5000
+    },
+    {
+      "first_sync_ms": 260.968835,
+      "snapshot_blake3": "bece7879887ea4490874d7a77029e09044312fa049839c837a4ac8cc64a0de80",
+      "steady_sync_ms": 159.992567,
+      "tracks": 5000
+    }
+  ],
+  "median_first_ms": 232.695579,
+  "median_steady_ms": 146.79826300000002,
+  "peak_rss_kib": 25124,
+  "cpu_user_seconds": 1.4168129999999999,
+  "cpu_system_seconds": 0.01312,
+  "wall_seconds": 1.4641403450000325,
+  "build_activity_in_parallel": true
+}

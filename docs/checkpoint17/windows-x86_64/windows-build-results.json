@@ -1,0 +1,19 @@
+{
+  "target": "x86_64-pc-windows-msvc",
+  "source_sha256": "8ae8495e49d7a78a0e4f921b02f59bd8be86626e9b3c2fd2c71aa2e4b75e6bb4",
+  "artifacts": [
+    {
+      "artifact": "Auvemir-windows-x86_64.zip",
+      "bytes": 14223468,
+      "sha256": "4186e907a085a351d492f5a45040b6cce6572d64d2c1c649387a3dc8ccd44a16"
+    },
+    {
+      "artifact": "Auvemir-0.1.0-windows-x86_64-Setup.exe",
+      "bytes": 14316863,
+      "sha256": "777bb0ee4c4480f467986e81069a554b9eb8bac2d4f3acca99206d229caace61"
+    }
+  ],
+  "runtime_libraries": [],
+  "device_tested": false,
+  "signed": false
+}

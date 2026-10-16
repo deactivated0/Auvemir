@@ -1,0 +1,20 @@
+[
+  {
+    "first_sync_ms": 320.168959,
+    "snapshot_blake3": "bece7879887ea4490874d7a77029e09044312fa049839c837a4ac8cc64a0de80",
+    "steady_sync_ms": 211.562219,
+    "tracks": 5000
+  },
+  {
+    "first_sync_ms": 267.28243000000003,
+    "snapshot_blake3": "bece7879887ea4490874d7a77029e09044312fa049839c837a4ac8cc64a0de80",
+    "steady_sync_ms": 202.830825,
+    "tracks": 5000
+  },
+  {
+    "first_sync_ms": 259.055891,
+    "snapshot_blake3": "bece7879887ea4490874d7a77029e09044312fa049839c837a4ac8cc64a0de80",
+    "steady_sync_ms": 190.801704,
+    "tracks": 5000
+  }
+]

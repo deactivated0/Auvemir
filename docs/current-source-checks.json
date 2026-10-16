@@ -1,0 +1,29 @@
+{
+  "checkpoint": 18,
+  "source_sha256": "eb30bedf0a3c459f26b9b6d7b668ba61646ac4114c049a2efdffa50947230d50",
+  "full_original_brief_complete": false,
+  "validation_platform": "local Linux x86_64",
+  "workspace_rust_tests": {
+    "passed": 75,
+    "failed": 0,
+    "core": 58,
+    "desktop": 15,
+    "android_context": 2
+  },
+  "clippy_workspace_all_targets_warnings_denied": "passed",
+  "slint_ui_compile": "passed",
+  "slint_software_layout_checks": [
+    "phone home",
+    "named preset controls",
+    "timed lyrics",
+    "lyrics editor"
+  ],
+  "layout_fixture_data": true,
+  "physical_device_tested": false,
+  "new_native_platform_builds": "pending",
+  "ios_simulator_build_fix": "explicit Clang deployment triple; new SDK run pending",
+  "flatpak": "packager and installed-runtime verification added; execution pending",
+  "latest_packaged_checkpoint": 17,
+  "latest_private_run": 38877462432,
+  "latest_packaged_source_sha256": "8ae8495e49d7a78a0e4f921b02f59bd8be86626e9b3c2fd2c71aa2e4b75e6bb4"
+}

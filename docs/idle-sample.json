@@ -1,0 +1,7 @@
+{
+  "case": "Empty library; no audio device opened; two-second screenshot timer includes startup/shutdown",
+  "exit": 0,
+  "elapsed_seconds": 2.089,
+  "cpu_seconds": 0.06,
+  "peak_rss_mib": 33.88
+}

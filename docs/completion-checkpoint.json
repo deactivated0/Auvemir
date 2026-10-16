@@ -1,0 +1,41 @@
+{
+  "restored_from_saved_source": 7,
+  "rust_tests_passed": 67,
+  "desktop_clippy": "passed",
+  "android_arm64_clippy": "passed",
+  "android_java_dex": "passed",
+  "android_focus_event_sequences": "passed",
+  "current_platform_packages": "x86_64 Android and Windows checkpoint packages saved; new source requires fresh native builds",
+  "apple_sdk_validation": "pending private GitHub native validation",
+  "physical_device_validation": "pending",
+  "full_original_brief_complete": false,
+  "recording_writer_checks": "passed; WAV draining and lock lifetime, including rename failure",
+  "android_runtime_validation": "previous x86_64 APK passed headless playback, OS focus, Activity replacement and microphone pause/resume/finalization on Android 28 software emulator",
+  "github_repository": "https://github.com/deactivated0/Auvemir; private source checkpoint and validation workflow committed after explicit renewed approval",
+  "rust_tests_source_sha256": "34b1738ce811660a68f6d08e67669055ce8bfaecc72454eff5ea8b44830dad5a",
+  "current_source_tests": "55 Rust core tests, 3 ambient transport tests and actual Slint UI compile passed; full native app and new instrumentation pending",
+  "environment_reset": "remaining local Linux packaging and ARM64 release compilation interrupted; compiled Linux release passed 14 codec fixtures before reset",
+  "first_private_ci_run": "https://github.com/deactivated0/Auvemir/actions/runs/38820110288",
+  "first_private_ci_findings": [
+    "Corresponding source vendoring/archive passed",
+    "Android runner SDK manager missing from PATH; corrected workflow to use explicit SDK tool path",
+    "Native jobs exposed Slint subtraction-token syntax in new vector icons; spacing corrected"
+  ],
+  "current_source_changes": [
+    "Room matching ignores missing duplicates and retries after a completed download",
+    "Ambient output activates the native media lifetime and exposes OS pause/resume without changing primary listening history",
+    "Shared transport remembers which audio was active before a focus interruption",
+    "Concurrent active capture retains a record-capable audio session when playback resumes",
+    "iOS interruption resume flags are consumed and repeated losses retain their original intent",
+    "Codec fixture generation supports FFmpeg native Vorbis when libvorbis is absent",
+    "Late ambient preparations are ignored after stopping, replacing a mix, joining a room or reaching the sleep deadline"
+  ],
+  "second_private_ci_run": "https://github.com/deactivated0/Auvemir/actions/runs/38821027777",
+  "second_private_ci_findings": [
+    "Both Android architectures compiled and APK signature/ZIP and ELF 16 KiB checks passed",
+    "macOS ARM64 passed Rust checks and compiled release; fixture generation failed because the test runner FFmpeg lacks libvorbis",
+    "Android API28 default system image requested an unaccepted preview license; stable Google APIs image selected for next test without automatic license acceptance",
+    "Android API35 KVM emulator passed native playback, focus, Activity replacement and recording notification actions; no System UI ANR",
+    "Linux ARM64 passed 14 codecs and verification of portable, DEB, RPM, Arch and AppImage packages"
+  ]
+}

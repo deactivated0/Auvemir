@@ -1,0 +1,4 @@
+BEGIN IMMEDIATE;
+CREATE TABLE reference_playlists(id TEXT PRIMARY KEY,name TEXT NOT NULL,provider TEXT NOT NULL,tracks TEXT NOT NULL,playlist_id INTEGER NOT NULL REFERENCES playlists(id) ON DELETE CASCADE);
+PRAGMA user_version=5;
+COMMIT;

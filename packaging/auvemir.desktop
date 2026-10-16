@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Auvemir
+Comment=Local music, audiobooks, podcasts, radio and ambient audio
+Exec=auvemir %f
+Icon=auvemir
+Terminal=false
+Categories=Audio;AudioVideo;Player;
+MimeType=audio/mpeg;audio/flac;audio/x-wav;audio/ogg;audio/opus;audio/mp4;
+StartupWMClass=auvemir

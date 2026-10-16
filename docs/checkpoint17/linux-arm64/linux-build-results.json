@@ -1,0 +1,38 @@
+{
+  "source_sha256": "8ae8495e49d7a78a0e4f921b02f59bd8be86626e9b3c2fd2c71aa2e4b75e6bb4",
+  "binary_sha256": "aa100284b91c2fc8530723c72159547c4769abd6b2fe9e0c63a4c3607772dd7a",
+  "packages": [
+    {
+      "package": "auvemir-0.1.0-linux-aarch64.tar.gz",
+      "container_valid": true,
+      "binary_matches_release": true,
+      "notice_present": true
+    },
+    {
+      "package": "auvemir_0.1.0_arm64.deb",
+      "container_valid": true,
+      "binary_matches_release": true,
+      "notice_present": true
+    },
+    {
+      "package": "auvemir-0.1.0-1-aarch64.pkg.tar.zst",
+      "container_valid": true,
+      "binary_matches_release": true,
+      "notice_present": true
+    },
+    {
+      "package": "auvemir-0.1.0-1.aarch64.rpm",
+      "container_valid": true,
+      "binary_matches_release": true,
+      "notice_present": true
+    },
+    {
+      "package": "Auvemir-0.1.0-aarch64.AppImage",
+      "container_valid": true,
+      "binary_matches_release": true,
+      "extracted_launcher_decode_passed": true
+    }
+  ],
+  "system_installation_tested": false,
+  "physical_device_tested": false
+}

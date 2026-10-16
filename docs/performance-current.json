@@ -1,0 +1,26 @@
+{
+  "runs": [
+    {
+      "first_sync_ms": 221.97114100000002,
+      "snapshot_blake3": "bece7879887ea4490874d7a77029e09044312fa049839c837a4ac8cc64a0de80",
+      "steady_sync_ms": 198.07948,
+      "tracks": 5000
+    },
+    {
+      "first_sync_ms": 233.750236,
+      "snapshot_blake3": "bece7879887ea4490874d7a77029e09044312fa049839c837a4ac8cc64a0de80",
+      "steady_sync_ms": 219.048628,
+      "tracks": 5000
+    },
+    {
+      "first_sync_ms": 220.855967,
+      "snapshot_blake3": "bece7879887ea4490874d7a77029e09044312fa049839c837a4ac8cc64a0de80",
+      "steady_sync_ms": 203.68397,
+      "tracks": 5000
+    }
+  ],
+  "peak_rss_kib": 24636,
+  "user_cpu_s": 1.5404309999999999,
+  "system_cpu_s": 0.004352,
+  "wall_s": 1.5451597009999887
+}

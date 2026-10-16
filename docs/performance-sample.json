@@ -1,0 +1,42 @@
+{
+  "measurement": "GUI process exits after two-second screenshot; synthetic ALSA output; not first-frame/idle/battery benchmark",
+  "binary_bytes": 37720808,
+  "peak_child_rss_mib": 36.51,
+  "screens": [
+    {
+      "screen": "desktop",
+      "exit": 0,
+      "seconds": 2.086,
+      "cpu_seconds": 2.08,
+      "screenshot_bytes": 119668
+    },
+    {
+      "screen": "mobile",
+      "exit": 0,
+      "seconds": 2.087,
+      "cpu_seconds": 2.041,
+      "screenshot_bytes": 70019
+    },
+    {
+      "screen": "library",
+      "exit": 0,
+      "seconds": 2.097,
+      "cpu_seconds": 2.07,
+      "screenshot_bytes": 107721
+    },
+    {
+      "screen": "settings",
+      "exit": 0,
+      "seconds": 2.096,
+      "cpu_seconds": 2.079,
+      "screenshot_bytes": 111971
+    },
+    {
+      "screen": "player",
+      "exit": 0,
+      "seconds": 2.103,
+      "cpu_seconds": 2.062,
+      "screenshot_bytes": 31727
+    }
+  ]
+}

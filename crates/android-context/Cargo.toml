@@ -1,0 +1,8 @@
+[package]
+name = "ndk-context"
+version = "0.1.1"
+edition = "2021"
+authors = ["The Rust Windowing contributors"]
+license = "MIT OR Apache-2.0"
+description = "Android JNI context with a process-lifetime application context for background audio"
+repository = "https://github.com/rust-windowing/android-ndk-rs"

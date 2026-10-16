@@ -1,0 +1,114 @@
+name: Build release packages
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+jobs:
+  mobile:
+    uses: ./.github/workflows/mobile.yml
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: ubuntu-24.04, name: linux-x86_64}
+          - {os: ubuntu-24.04-arm, name: linux-aarch64}
+          - {os: windows-2025, name: windows-x86_64}
+          - {os: macos-15-intel, name: macos-x86_64}
+          - {os: macos-15, name: macos-arm64}
+    runs-on: ${{ matrix.os }}
+    env:
+      MACOSX_DEPLOYMENT_TARGET: '13.0'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Linux build dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y cmake clang libclang-dev pkg-config libasound2-dev libfontconfig1-dev libxkbcommon-dev libx11-dev rpm zstd ffmpeg
+      - name: macOS build dependencies
+        if: runner.os == 'macOS'
+        run: |
+          brew install llvm cmake
+          echo "LIBCLANG_PATH=$(brew --prefix llvm)/lib" >> "$GITHUB_ENV"
+      - name: Windows build dependencies
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install llvm nsis -y --no-progress
+          "LIBCLANG_PATH=C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Toolchain
+        run: rustup toolchain install 1.99.0 --profile minimal --component rustfmt --component clippy
+      - name: Validate source
+        run: |
+          cargo +1.99.0 fmt --all --check
+          cargo +1.99.0 clippy --locked --workspace --all-targets -- -D warnings
+          cargo +1.99.0 test --locked --workspace
+      - name: Compile
+        if: runner.os != 'Windows'
+        run: cargo +1.99.0 build --locked --release -p auvemir -j 2
+      - name: Linux codec checks and packages
+        if: runner.os == 'Linux'
+        run: |
+          python3 tests/verify_codecs.py target/release/auvemir --extended
+          python3 packaging/build_linux.py portable
+          python3 packaging/build_linux.py deb
+          python3 packaging/build_linux.py rpm
+          python3 packaging/build_linux.py arch
+          python3 packaging/build_appimage.py
+      - name: macOS packages
+        if: runner.os == 'macOS'
+        run: bash packaging/build_macos.sh
+      - name: Windows packages
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          python packaging/build_windows.py --makensis 'C:\Program Files (x86)\NSIS\makensis.exe'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: auvemir-${{ matrix.name }}
+          path: |
+            dist/*.zip
+            dist/*.dmg
+            dist/*.exe
+            dist/*.deb
+            dist/*.rpm
+            dist/*.pkg.tar.zst
+            dist/*.tar.gz
+            dist/*.AppImage
+            dist/SHA256SUMS
+          if-no-files-found: error
+  source:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install 1.99.0 --profile minimal
+      - run: cargo +1.99.0 vendor --locked vendor > vendor-config.toml
+      - run: |
+          mkdir -p .cargo dist
+          mv vendor-config.toml .cargo/config.toml
+          tar --exclude=target --exclude=dist --exclude=.git -cJf dist/auvemir-corresponding-source.tar.xz .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: auvemir-corresponding-source
+          path: dist/*
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [build, source, mobile]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Create reviewable draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          AUVEMIR_TAG: ${{ github.ref_name }}
+        run: |
+          find artifacts -type f ! -name SHA256SUMS -exec sha256sum {} \; > artifacts/SHA256SUMS
+          gh release create "$AUVEMIR_TAG" artifacts/* --draft --title "Auvemir $AUVEMIR_TAG" --notes "Desktop packages, Android development packages, unsigned iOS package and corresponding source. Device validation and Apple provisioning are separate requirements. See README and docs/PLATFORMS.md for validation status."
