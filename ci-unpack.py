@@ -6,7 +6,7 @@ from pathlib import Path,PurePosixPath
 import stat
 import sys
 import zipfile
-EXPECTED_SHA256='ce6c73949e77c9aeafbad3bbb549704c9c6429b79b60832151146cba645cba78'
+EXPECTED_SHA256='eb9159511cbdd8d96f6e1e2123da13e4c35432f14df6ab8676b263f0612ade78'
 archive=Path('Auvemir-Source.zip')
 with archive.open('rb') as source:observed=hashlib.file_digest(source,'sha256').hexdigest()
 if observed!=EXPECTED_SHA256:raise RuntimeError('Source checkpoint SHA-256 differs from the reviewed input')
