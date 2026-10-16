@@ -58,6 +58,14 @@ jobs:
           "LIBCLANG_PATH=C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       - name: Rust toolchain
         run: rustup toolchain install 1.99.0 --profile minimal --component rustfmt --component clippy
+      - name: Reuse native Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            source/Auvemir/target
+          key: native-rust-1.99-${{ matrix.name }}-${{ hashFiles('source/Auvemir/Cargo.lock') }}
       - name: Source format, Clippy and regression tests
         run: |
           cargo +1.99.0 fmt --all --check
@@ -252,3 +260,49 @@ jobs:
           name: auvemir-corresponding-source
           retention-days: 1
           path: source/Auvemir/dist/Auvemir-Corresponding-Source.tar.gz
+
+  flatpak:
+    if: always() && (inputs.target == 'all' || inputs.target == 'linux')
+    needs: native
+    name: Flatpak ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: ubuntu-24.04, name: linux-x86_64}
+          - {os: ubuntu-24.04-arm, name: linux-arm64}
+    defaults:
+      run:
+        working-directory: source/Auvemir
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Extract reviewed source checkpoint
+        working-directory: .
+        run: python ci-unpack.py
+      - uses: actions/download-artifact@v4
+        with:
+          name: auvemir-${{ matrix.name }}
+          path: native-input
+      - name: Install Flatpak build and runtime dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y flatpak flatpak-builder dbus-x11
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user --noninteractive -y flathub org.freedesktop.Platform//25.08 org.freedesktop.Sdk//25.08
+      - name: Package verified executable and exercise the installed runtime
+        run: dbus-run-session -- python packaging/build_flatpak.py --binary "$GITHUB_WORKSPACE/native-input/target/release/auvemir" --build-report "$GITHUB_WORKSPACE/native-input/docs/linux-build-results.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: auvemir-flatpak-${{ matrix.name }}
+          retention-days: 1
+          path: |
+            source/Auvemir/dist/*.flatpak
+            source/Auvemir/docs/flatpak-build-results.json
+            source/Auvemir/docs/validation-source.json
