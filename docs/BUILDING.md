@@ -33,9 +33,10 @@ python3 packaging/build_linux.py deb
 python3 packaging/build_linux.py rpm
 python3 packaging/build_linux.py arch
 python3 packaging/build_appimage.py
+python3 tests/verify_packages.py
 ```
 
-Packaging needs `dpkg-deb`, `rpmbuild` and `zstd` for their formats. AppImage tooling is verified against SHA-256 from the upstream GitHub release. Windows NSIS and macOS app/DMG scripts are included. GitHub workflows build native desktop architectures, supply corresponding source and create a draft release after tag builds pass. Signing identities and platform verification are not fabricated.
+Packaging needs `dpkg-deb`, `rpmbuild` and `zstd` for their formats. Package verification also needs `rpm2cpio`, `cpio` and the Linux capture dependencies from [CAPTURES.md](CAPTURES.md). It extracts all five formats, compares their executable with the release build, checks notices and exercises the AppImage's decoder and native window. AppImage tooling is verified against SHA-256 from the upstream GitHub release. Windows NSIS and macOS app/DMG scripts are included. GitHub workflows build native desktop architectures, supply corresponding source and create a draft release after tag builds pass. Signing identities and platform verification are not fabricated.
 
 On Windows, `python packaging/build_windows.py` creates a portable ZIP and NSIS installer; install NSIS first. MSVC packages use the static CRT. GNU cross builds require the matching runtime DLLs via `--runtime-dir`.
 

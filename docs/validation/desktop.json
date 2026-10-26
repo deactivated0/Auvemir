@@ -1,6 +1,6 @@
 {
-  "source_sha256": "abbf2a1cb39684e3aab7547f6a1eee6f293d929d82dca1d273f64aa54a4d544e",
-  "binary_sha256": "cdfa97e710d863c5404f138f26ebf4f47b15e651f4cc0990381ad9f2f071ed6c",
+  "source_sha256": "d5dca5eb1c769ec0235749fd4caa860a08acab2bea6cb8ae9835a88c6c651b34",
+  "binary_sha256": "37b302a817fbe56be9cdf712ea86e92badf533a17ebaa68135837f7627e252bb",
   "result": "passed",
   "checks": [
     "--help without display",

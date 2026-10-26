@@ -1,0 +1,117 @@
+{
+  "application_source_sha256": "d5dca5eb1c769ec0235749fd4caa860a08acab2bea6cb8ae9835a88c6c651b34",
+  "commit": "4430194c0903ce3e3ccb4ef6c9db3e260ba91a13",
+  "url": "https://github.com/deactivated0/Auvemir/actions/runs/40337413423",
+  "conclusion": "success",
+  "jobs": [
+    {
+      "platform": "desktop (macos-15)",
+      "url": "https://github.com/deactivated0/Auvemir/actions/runs/40337413423/job/121622600969",
+      "conclusion": "success",
+      "completed_at": "2026-10-26T14:17:54Z",
+      "checks": [
+        {
+          "name": "Run cargo +1.99.0 fmt --all --check",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run cargo +1.99.0 clippy --locked --release --workspace --all-targets -- -D warnings",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run cargo +1.99.0 test --locked --release --workspace",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run cargo +1.99.0 build --locked --release -p auvemir -j 2",
+          "conclusion": "success"
+        },
+        {
+          "name": "Native desktop journeys and responsive renders",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Native and extended codec fixtures",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Real window captures",
+          "conclusion": "skipped"
+        }
+      ]
+    },
+    {
+      "platform": "desktop (windows-2025)",
+      "url": "https://github.com/deactivated0/Auvemir/actions/runs/40337413423/job/121622601345",
+      "conclusion": "success",
+      "completed_at": "2026-10-26T14:17:38Z",
+      "checks": [
+        {
+          "name": "Run cargo +1.99.0 fmt --all --check",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run cargo +1.99.0 clippy --locked --release --workspace --all-targets -- -D warnings",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run cargo +1.99.0 test --locked --release --workspace",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run cargo +1.99.0 build --locked --release -p auvemir -j 2",
+          "conclusion": "success"
+        },
+        {
+          "name": "Native desktop journeys and responsive renders",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Native and extended codec fixtures",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Real window captures",
+          "conclusion": "skipped"
+        }
+      ]
+    },
+    {
+      "platform": "desktop (ubuntu-24.04)",
+      "url": "https://github.com/deactivated0/Auvemir/actions/runs/40337413423/job/121622601390",
+      "conclusion": "success",
+      "completed_at": "2026-10-26T14:17:18Z",
+      "checks": [
+        {
+          "name": "Run cargo +1.99.0 fmt --all --check",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run cargo +1.99.0 clippy --locked --release --workspace --all-targets -- -D warnings",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run cargo +1.99.0 test --locked --release --workspace",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run cargo +1.99.0 build --locked --release -p auvemir -j 2",
+          "conclusion": "success"
+        },
+        {
+          "name": "Native desktop journeys and responsive renders",
+          "conclusion": "success"
+        },
+        {
+          "name": "Native and extended codec fixtures",
+          "conclusion": "success"
+        },
+        {
+          "name": "Real window captures",
+          "conclusion": "success"
+        }
+      ]
+    }
+  ],
+  "scope": "Final application code. Subsequent presentation/evidence and release-workflow updates do not change application sources; their current status is available on GitHub."
+}

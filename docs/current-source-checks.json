@@ -1,29 +1,32 @@
 {
-  "checkpoint": 18,
-  "source_sha256": "eb30bedf0a3c459f26b9b6d7b668ba61646ac4114c049a2efdffa50947230d50",
-  "full_original_brief_complete": false,
-  "validation_platform": "local Linux x86_64",
-  "workspace_rust_tests": {
-    "passed": 75,
+  "application_source_sha256": "d5dca5eb1c769ec0235749fd4caa860a08acab2bea6cb8ae9835a88c6c651b34",
+  "build_inputs_sha256": "279f11986a478ac5139f0d31c9bdf9dabd75a12f498484b937e0dd5a7b662f3a",
+  "validation_platform": "Linux x86_64",
+  "rust": {
+    "source_sha256": "d5dca5eb1c769ec0235749fd4caa860a08acab2bea6cb8ae9835a88c6c651b34",
+    "toolchain": "rustc 1.99.0 (b940084d7 2026-09-28)",
+    "format": "passed: cargo fmt --all --check",
+    "clippy": "passed: cargo clippy --locked --release --workspace --all-targets -- -D warnings",
+    "tests_command": "cargo test --locked --release --workspace",
+    "passed": 97,
     "failed": 0,
-    "core": 58,
-    "desktop": 15,
-    "android_context": 2
+    "ignored": 1,
+    "test_binaries_and_doctest_groups": 17,
+    "note": "Ignored explicit thumbnail benchmark is executed separately. Tests run on Linux x86_64."
   },
-  "clippy_workspace_all_targets_warnings_denied": "passed",
-  "slint_ui_compile": "passed",
-  "slint_software_layout_checks": [
-    "phone home",
-    "named preset controls",
-    "timed lyrics",
-    "lyrics editor"
-  ],
-  "layout_fixture_data": true,
+  "native_checks": {
+    "passed": 36,
+    "report": "validation/desktop-pass2.json"
+  },
+  "codec_fixtures": {
+    "passed": 14,
+    "report": "validation/codecs.json"
+  },
+  "linux_package_formats": 5,
+  "package_report": "linux-build-results.json",
+  "exact_behavior_report": "validation/parity-final.json",
+  "performance_report": "TRANSFORMATION.md",
   "physical_device_tested": false,
-  "new_native_platform_builds": "pending",
-  "ios_simulator_build_fix": "explicit Clang deployment triple; new SDK run pending",
-  "flatpak": "packager and installed-runtime verification added; execution pending",
-  "latest_packaged_checkpoint": 17,
-  "latest_private_run": 38877462432,
-  "latest_packaged_source_sha256": "8ae8495e49d7a78a0e4f921b02f59bd8be86626e9b3c2fd2c71aa2e4b75e6bb4"
+  "signed_release_published": false,
+  "cross_platform_quality_workflow": "https://github.com/deactivated0/Auvemir/actions/workflows/ci.yml"
 }

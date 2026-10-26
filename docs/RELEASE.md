@@ -1,12 +1,12 @@
 # Release and publication
 
-The repository is ready for GitHub source review. Publish the source under the name **Auvemir**. Run the CI and native release workflows before representing additional platforms as supported.
+The integrated source is on the default `Main` branch. [TRANSFORMATION.md](TRANSFORMATION.md) records the current engineering work, measured results and verification scope.
 
-1. Connect the GitHub account and select the repository owner.
-2. Create the Auvemir repository and push the reviewed source and Cargo.lock.
-3. Run “Build release packages” manually to collect native desktop artifacts.
-4. Inspect logs and artifacts. Platform failures must be fixed before release.
-5. Tag v0.1.0 only when the intended development release is approved. Tag builds create a draft GitHub release with corresponding source.
-6. Review platform-status and feature-gap documentation, attach checksums and the source bundle, then publish the development release.
+1. Pull `Main` and confirm the native quality workflow passes on Linux, Windows and macOS. Reproduce the locked release checks from [BUILDING.md](BUILDING.md).
+2. Run **Build release packages** manually to collect desktop, Android development, unsigned iOS and corresponding-source artifacts. Inspect each job and its artifacts before distributing a platform build.
+3. Extract packages, verify checksums and licenses, then test installation, audio output, microphone, dialogs, secure storage, media controls and intended integrations on the supported platforms. Follow [PLATFORMS.md](PLATFORMS.md) for outstanding device validation.
+4. Configure the owner's signing identities privately. Windows distribution needs the intended code-signing identity; macOS distribution needs Developer ID signing and notarization; Android updates need a retained production key; iOS devices need valid signing and provisioning.
+5. For an approved release, update the package version and create a new version tag. Preserve existing tags. The tag workflow creates a reviewable draft GitHub release after its required jobs pass.
+6. Review the draft's platform scope, checksums, notices and corresponding source before publication. State any unsigned or development-only artifacts clearly.
 
-The initial delivery is not a completed implementation of the full original brief. Android/iOS, casting and the remaining integration/features must be finished and validated separately. GitHub login does not itself implement those features. macOS builds use ad-hoc signing, not a Developer ID/notarized identity; Windows installers have no fabricated signing certificate.
+The Linux package checks extract and execute artifacts; they do not establish clean-system installation or physical-device readiness. Current responsive phone captures come from the Linux renderer. Signing credentials, private media and account secrets are excluded from the repository.

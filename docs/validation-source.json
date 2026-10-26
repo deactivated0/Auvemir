@@ -4,5 +4,6 @@
   "github_commit": null,
   "runner_os": null,
   "current_job_reports_only": true,
-  "full_original_brief_complete": false
+  "full_original_brief_complete": false,
+  "record_status": "Historical archive identity; use current-source-checks.json for the redesigned application."
 }

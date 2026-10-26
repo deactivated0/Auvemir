@@ -1,0 +1,18 @@
+{
+  "default_branch": "Main",
+  "remote_branch_count": 1,
+  "remote_branches": [
+    "Main"
+  ],
+  "verified_application_commit": "4430194c0903ce3e3ccb4ef6c9db3e260ba91a13",
+  "application_source_sha256": "d5dca5eb1c769ec0235749fd4caa860a08acab2bea6cb8ae9835a88c6c651b34",
+  "preserved_previous_branch_tips": {
+    "main": "42fe60edfa9337a9c1ebb85be7f2b1083545c9e2",
+    "build/checkpoint-22": "b70b6daa8410af17d3e62d1adab8f704be933618",
+    "build/checkpoint-23": "66f48553208db8755f7bbca7c740894d3bbbe4a2",
+    "codex/fix-rustfmt-ci": "70d8b113318eed6c47045fb65fc6fe02061d2878",
+    "codex/production-refresh-optimizations": "0c76ef1ad047d204f065e830f63464baf7eabe96"
+  },
+  "preservation": "Each previous tip was verified as an ancestor of Main before removal. Existing version tags retained.",
+  "proof": "github-main-branch.jpg"
+}

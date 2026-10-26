@@ -1,0 +1,42 @@
+{
+  "feature_baseline_commit": "3f2855bacae9f36176eb187eb09c8d86cdf23de8",
+  "final_source_sha256": "d5dca5eb1c769ec0235749fd4caa860a08acab2bea6cb8ae9835a88c6c651b34",
+  "static_captures": {
+    "desktop-equalizer.png": {
+      "same_dimensions": true,
+      "identical_rgba_pixels": true
+    },
+    "desktop-home.png": {
+      "same_dimensions": true,
+      "identical_rgba_pixels": true
+    },
+    "desktop-library.png": {
+      "same_dimensions": true,
+      "identical_rgba_pixels": true
+    },
+    "desktop-light.png": {
+      "same_dimensions": true,
+      "identical_rgba_pixels": true
+    },
+    "phone-home.png": {
+      "same_dimensions": true,
+      "identical_rgba_pixels": true
+    },
+    "phone-library.png": {
+      "same_dimensions": true,
+      "identical_rgba_pixels": true
+    },
+    "phone-player.png": {
+      "same_dimensions": true,
+      "identical_rgba_pixels": true
+    },
+    "settings-appearance.png": {
+      "same_dimensions": true,
+      "identical_rgba_pixels": true
+    }
+  },
+  "queue_output_identical": true,
+  "large_library_capture_identical_across_baseline_and_both_passes": true,
+  "ui_source_identical_to_feature_baseline": true,
+  "comparison": "Exact dimensions and RGBA byte equality, including all color and alpha channels. Queue workload asserts complete media and cursor equality; BLAKE3 matches. Animated source/timing is unchanged; GIF frame timings vary with scheduler and are not compared as an FPS assertion."
+}

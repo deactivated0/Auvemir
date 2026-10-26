@@ -1,8 +1,19 @@
 {
-  "runtime_repository": "https://github.com/AppImage/type2-runtime",
-  "runtime_source_commit": "8f39b89e2ac31e1640b3d3f7e9a5108e6ce805fa",
-  "runtime_source_archive_sha256": "99c6380207d7edf9b7b796cd7471c38e36d4d9a10770a1f911b397313ac2da3d",
-  "runtime_asset_sha256": "156f4bdbde9c52d01814600013e0a273f0118dc2de98975f3c8c63427ec79074",
-  "tool_asset_sha256": "95cbe7cce9717fce90c484e34052ee7c7f1d7635b33c12525b4776826a7d29b6",
-  "runtime_release_tag": "continuous"
+  "tooling": [
+    {
+      "repository": "AppImage/appimagetool",
+      "tag": "continuous",
+      "asset": "appimagetool-x86_64.AppImage",
+      "sha256": "95cbe7cce9717fce90c484e34052ee7c7f1d7635b33c12525b4776826a7d29b6"
+    },
+    {
+      "repository": "AppImage/type2-runtime",
+      "tag": "continuous",
+      "asset": "runtime-x86_64",
+      "sha256": "617aa77314d57c8b8e4fae9c3f0b35af7b30d5529cb69e98f64f92510ed98a46"
+    }
+  ],
+  "package": "Auvemir-0.1.0-x86_64.AppImage",
+  "method": "Official upstream GitHub release assets, checked against their supplied SHA-256 digests before execution.",
+  "verification": "linux-build-results.json"
 }

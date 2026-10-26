@@ -5,8 +5,8 @@
 | Area | Implemented | Still required |
 |---|---|---|
 | Foundation | Rust core/desktop crates, Slint, SQLite migrations 1–5, bounded commands, lazy services | Stronger supervision/recovery and full lifecycle handling |
-| Interface | Black desktop/phone layouts, home shortcuts, persistent/expanded player, real library views, forms and keyboard controls | Complete reference fidelity, artwork grids, full screen-reader/device interaction tests and virtualization |
-| Library | Incremental scanning, tags, atomic tag editor, embedded/folder artwork, album/artist groups, favorites/search | Genre/composer/folder detail, exclusions, watcher, duplicate/stale-file management |
+| Interface | Semantic dark/light desktop and phone layouts, native subtitle motion/reduced motion, grouped settings, home shortcuts, persistent/expanded player, real library views, labeled controls and shortcut guide | Artwork grids, full screen-reader/dynamic-text/device interaction tests and broader virtualization |
+| Library | Incremental resilient imports, atomic metadata/fingerprint batches, progress/cancel, persistent stable sorting, tags, atomic tag editor, embedded/folder artwork, album/artist groups, favorites/literal search | Genre/composer/folder detail, exclusions, watcher, duplicate/stale-file management |
 | Audio | CPAL, native decoding/Opus, bounded recycled PCM, producer-side EQ and pitch-preserving speed, seek/volume | Seamless queue gapless transitions, crossfade, ReplayGain, output picker, broad hardware profiling |
 | Formats | 10 native fixtures plus four extended fixtures; optional FFmpeg | Broad real-world corpus, chained/multichannel Ogg Opus and device validation |
 | Online music | Personal servers, authorized URLs, optional Invidious search/trending/direct AAC adapter | Native InnerTube extraction/accounts, full artist/album/playlists/recommendations, provider imports and sync |
@@ -23,7 +23,7 @@
 | History/scrobbling | Actual listening-time history/statistics, JSON backup/import, persistent retry queue, multi-service ListenBrainz/Last.fm/Libre.fm/Maloja adapters and now-playing submissions | Live accounts, Last.fm authorization UI, detailed genre/album analytics |
 | OS | MPRIS/SMTC/macOS transport/metadata adapters, native audio and dialogs | Full platform/device verification, notifications, audio focus/routes and mobile background lifecycle |
 | Security | No telemetry, opt-in connections, native credentials, URL/DNS checks, response bounds, redirect isolation, SQL parameters | Native credential-store device checks, comprehensive threat/recovery review |
-| Distribution | Private native Linux/Windows/macOS and Android builds, unsigned iOS device package; verified Linux packages; Flatpak build/runtime-check tooling | Current-source rebuilds, actual Flatpak execution, installation checks across distributions, iOS simulator correction, device checks and release signing |
+| Distribution | Public Linux/Windows/macOS quality CI; current Linux portable/DEB/RPM/Arch/AppImage extraction and executable verification; Android/iOS packaging sources and Flatpak build/runtime-check tooling | Current-source mobile/other-architecture release builds, actual Flatpak execution, clean-distribution installation, Apple SDK/device checks and release signing |
 
 ## Additional requested integrations
 
