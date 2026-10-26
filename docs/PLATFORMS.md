@@ -9,7 +9,7 @@ Current verification and remaining release work are recorded in [TRANSFORMATION.
 | Windows x86_64 | Public quality CI passed for the final application source; MSVC build, static CRT release, portable ZIP and NSIS installer scripts | Interactive installation, WASAPI/SMTC/dialog/capture devices, signing |
 | Windows ARM64 | Source may be portable; no supported package claimed | Toolchain/native dependencies and device validation |
 | macOS Intel/ARM64 | Native sources and app ZIP/DMG scripts; public macOS ARM64 quality CI passed for the final application source | Current-source Intel release build, physical Core Audio/Keychain/microphone/media controls, signing/notarization |
-| Android ARM64/x86_64 | Java host, native audio worker, foreground service, secure storage and APK signature/alignment checks | Current-source native build, lifecycle/touch/audio/storage/route checks on devices |
+| Android ARM64/ARMv7/x86_64 | Java host, native audio worker, foreground service, secure storage and APK signature/alignment checks | Current-source native build, lifecycle/touch/audio/storage/route checks on devices |
 | iOS device/simulator | Swift host, Rust sources, Keychain, AirPlay/CarPlay integration and build scripts | Current-source Apple SDK build, provisioning, installation and physical AVAudioSession/Files/Keychain/AirPlay/CarPlay checks |
 | Flatpak | Verified-binary packager and installed-runtime checks in source | Actual current-source builder/runtime execution; no Flathub publication claimed |
 

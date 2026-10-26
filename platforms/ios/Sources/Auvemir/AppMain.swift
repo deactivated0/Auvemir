@@ -90,6 +90,11 @@ final class Host:NSObject,UIDocumentPickerDelegate {
 @_cdecl("auvemir_user_transport") func nativeUserTransport(){DispatchQueue.main.async{Host.shared.resume=false}}
 @_cdecl("auvemir_shutdown") func nativeShutdown(){try? AVAudioSession.sharedInstance().setActive(false,options:.notifyOthersOnDeactivation);DispatchQueue.main.async{MPNowPlayingInfoCenter.default().nowPlayingInfo=nil}}
 @_cdecl("auvemir_routes") func nativeRoutes(){DispatchQueue.main.async{let controller=UIViewController();controller.view.backgroundColor = .black;let picker=AVRoutePickerView();picker.tintColor = .white;picker.translatesAutoresizingMaskIntoConstraints=false;controller.view.addSubview(picker);NSLayoutConstraint.activate([picker.centerXAnchor.constraint(equalTo:controller.view.centerXAnchor),picker.centerYAnchor.constraint(equalTo:controller.view.centerYAnchor),picker.widthAnchor.constraint(equalToConstant:80),picker.heightAnchor.constraint(equalToConstant:80)]);controller.modalPresentationStyle = .pageSheet;topController()?.present(controller,animated:true)}}
-exit(rustRun())
+@main
+enum AuvemirAppMain {
+    static func main() {
+        exit(rustRun())
+    }
+}
 
 @_cdecl("auvemir_reduce_motion") func nativeReduceMotion() -> Bool { UIAccessibility.isReduceMotionEnabled }
