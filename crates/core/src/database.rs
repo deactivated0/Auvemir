@@ -124,7 +124,7 @@ impl Store {
         .collect::<rusqlite::Result<Vec<_>>>()?)
     }
     pub fn get(&self, id: &str) -> Result<Option<Media>> {
-        Ok(self.conn.query_row("SELECT id,kind,title,artist,album,location,duration_ms,artwork,favorite,provider,group_id,track_number FROM media WHERE id=?1", [id], decode_media).optional()?)
+        Ok(self.conn.prepare_cached("SELECT id,kind,title,artist,album,location,duration_ms,artwork,favorite,provider,group_id,track_number FROM media WHERE id=?1")?.query_row([id], decode_media).optional()?)
     }
     pub fn count(&self) -> Result<u64> {
         Ok(self
@@ -554,6 +554,32 @@ fn sql_int(n: u64) -> Result<i64> {
 #[cfg(test)]
 mod performance_regression_tests {
     use super::*;
+    #[test]
+    fn prepared_media_lookup_observes_updates_deletion_and_decode_errors() {
+        let mut db = Store::memory().unwrap();
+        let mut item = Media::new(MediaKind::LocalMusic, "local", "/queue.flac", "Before");
+        assert_eq!(db.get(&item.id).unwrap(), None);
+        db.upsert(std::slice::from_ref(&item)).unwrap();
+        assert_eq!(db.get(&item.id).unwrap(), Some(item.clone()));
+        db.favorite(&item.id).unwrap();
+        item.favorite = true;
+        item.title = "After".into();
+        item.duration_ms = 21000;
+        db.upsert(std::slice::from_ref(&item)).unwrap();
+        assert_eq!(db.get(&item.id).unwrap(), Some(item.clone()));
+        db.conn
+            .execute("UPDATE media SET duration_ms=x'00' WHERE id=?1", [&item.id])
+            .unwrap();
+        assert!(db.get(&item.id).is_err());
+        db.conn
+            .execute("UPDATE media SET duration_ms=21000 WHERE id=?1", [&item.id])
+            .unwrap();
+        assert_eq!(db.get(&item.id).unwrap(), Some(item.clone()));
+        db.conn
+            .execute("DELETE FROM media WHERE id=?1", [&item.id])
+            .unwrap();
+        assert_eq!(db.get(&item.id).unwrap(), None);
+    }
     #[test]
     fn prepared_settings_observe_updates_and_deletions() {
         let db = Store::memory().unwrap();

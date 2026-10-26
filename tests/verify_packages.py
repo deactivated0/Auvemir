@@ -11,6 +11,9 @@ import tempfile
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'packaging'))
 from source_identity import source_digest
+sys.path.insert(0,str(ROOT/'tools'))
+from capture_screenshots import capture
+from native_session import display, profile_environment
 
 def digest(path):
     with path.open('rb') as file:return hashlib.file_digest(file,'sha256').hexdigest()
@@ -45,7 +48,15 @@ def main():
         fixture=work/'tone.wav';subprocess.run(['ffmpeg','-loglevel','error','-f','lavfi','-i','sine=frequency=440:duration=1','-y',str(fixture)],check=True)
         response=subprocess.run([str(output/'squashfs-root/AppRun'),'--decode',str(fixture)],check=True,capture_output=True,text=True)
         if 'Decoded 44100 samples' not in response.stdout:raise RuntimeError('Extracted AppImage launcher did not decode the fixture')
-        checks.append({'package':app.name,'container_valid':True,'binary_matches_release':True,'extracted_launcher_decode_passed':True})
+        plugin=output/'squashfs-root/usr/lib/libxkbcommon-x11.so.0'
+        if not plugin.is_file():raise RuntimeError('AppImage is missing its dynamically loaded X11 keyboard library')
+        with display() as session:
+            environment=profile_environment(session,work/'appimage-profile')
+            environment['LD_DEBUG']='libs'
+            log=capture(output/'squashfs-root/AppRun',environment,work/'appimage-window.png')
+            if not any('calling init:' in line and str(plugin) in line for line in log.splitlines()):
+                raise RuntimeError('AppImage window did not load the bundled X11 keyboard library')
+        checks.append({'package':app.name,'container_valid':True,'binary_matches_release':True,'extracted_launcher_decode_passed':True,'native_window_capture_passed':True,'bundled_x11_keyboard_library_loaded':True})
     report={'source_sha256':source_digest(),'binary_sha256':expected,'packages':checks,'system_installation_tested':False,'physical_device_tested':False}
     (ROOT/'docs/linux-build-results.json').write_text(json.dumps(report,indent=2)+'\n');print(json.dumps(report,indent=2))
 if __name__=='__main__':main()

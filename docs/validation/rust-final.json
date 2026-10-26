@@ -1,0 +1,12 @@
+{
+  "source_sha256": "d5dca5eb1c769ec0235749fd4caa860a08acab2bea6cb8ae9835a88c6c651b34",
+  "toolchain": "rustc 1.99.0 (b940084d7 2026-09-28)",
+  "format": "passed: cargo fmt --all --check",
+  "clippy": "passed: cargo clippy --locked --release --workspace --all-targets -- -D warnings",
+  "tests_command": "cargo test --locked --release --workspace",
+  "passed": 97,
+  "failed": 0,
+  "ignored": 1,
+  "test_binaries_and_doctest_groups": 17,
+  "note": "Ignored explicit thumbnail benchmark is executed separately. Tests run on Linux x86_64."
+}

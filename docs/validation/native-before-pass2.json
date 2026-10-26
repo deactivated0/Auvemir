@@ -1,0 +1,26 @@
+{
+  "source_sha256": "d0f430dca7266aac7f84b18ebc08e45878281fbb91c08329cdd3cde54e96c091",
+  "binary_bytes": 43902792,
+  "queue_tracks": 5000,
+  "samples": [
+    {
+      "wall_ms": 1115.5648570002086,
+      "cpu_ms": 191.722,
+      "peak_rss_kib": 49716,
+      "capture_sha256": "bb0ef87dfe39d96a9536d82e196f2a6ab669296e1505c701e7293fb223c69ad7"
+    },
+    {
+      "wall_ms": 1138.885936999941,
+      "cpu_ms": 174.966,
+      "peak_rss_kib": 49524,
+      "capture_sha256": "bb0ef87dfe39d96a9536d82e196f2a6ab669296e1505c701e7293fb223c69ad7"
+    },
+    {
+      "wall_ms": 1158.3107760006897,
+      "cpu_ms": 229.44799999999998,
+      "peak_rss_kib": 49416,
+      "capture_sha256": "bb0ef87dfe39d96a9536d82e196f2a6ab669296e1505c701e7293fb223c69ad7"
+    }
+  ],
+  "method": "Three isolated runs, warm OS cache, same generated metadata and artwork, restored 5000-track queue, native software rendering, 1000 ms capture timer. Wall time includes the fixed timer and PNG encoding. CPU covers startup/idle/render together, not pure idle. RSS is wait4 child peak. No audio hardware or FPS measurement."
+}

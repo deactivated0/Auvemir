@@ -1,0 +1,26 @@
+{
+  "source_sha256": "d0f430dca7266aac7f84b18ebc08e45878281fbb91c08329cdd3cde54e96c091",
+  "queue": {
+    "output_blake3": "cafaeee05438c36108bf814135c09a6501f4e75a78b7abd50a7a390ebc26843d",
+    "queue_restore_ms": [
+      47.401324,
+      34.723379,
+      42.474207,
+      37.973986000000004,
+      39.054566,
+      35.69491,
+      33.738402
+    ],
+    "three_sorted_pages_ms": [
+      9.708464,
+      8.596665999999999,
+      7.775696,
+      7.761705,
+      6.684629,
+      7.338095999999999,
+      7.42046
+    ],
+    "tracks": 5000
+  },
+  "method": "Release workload, no concurrent build; complete restored media values and cursor asserted."
+}
