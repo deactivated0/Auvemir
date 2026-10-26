@@ -24,6 +24,8 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y cmake clang libclang-dev pkg-config
       - name: Rust toolchain
         run: rustup toolchain install 1.99.0 --profile minimal
+      - name: Android SDK tools
+        uses: android-actions/setup-android@v4
       - name: Android SDK
         run: |
           sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0' 'ndk;29.0.14206865'
