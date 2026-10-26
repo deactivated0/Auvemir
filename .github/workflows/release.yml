@@ -99,7 +99,7 @@ jobs:
           name: auvemir-corresponding-source
           path: dist/*
   release:
-    if: startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
     needs: [build, source, mobile]
     runs-on: ubuntu-24.04
     permissions:
@@ -109,13 +109,30 @@ jobs:
         with:
           path: artifacts
           merge-multiple: true
+      - name: Select release version and target
+        run: |
+          if [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]]; then
+            version="$(python3 -c 'import tomllib; print(tomllib.load(open("Cargo.toml", "rb"))["workspace"]["package"]["version"])')"
+            tag="v$version"
+            target="$GITHUB_SHA"
+          else
+            tag="$GITHUB_REF_NAME"
+            version="${tag#v}"
+            target=""
+          fi
+          printf 'AUVEMIR_TAG=%s\nAUVEMIR_VERSION=%s\nAUVEMIR_RELEASE_TARGET=%s\n' "$tag" "$version" "$target" >> "$GITHUB_ENV"
       - name: Bundle section screenshots
-        run: zip -qr "artifacts/Auvemir-${GITHUB_REF_NAME#v}-screenshots.zip" docs/screenshots
+        run: zip -qr "artifacts/Auvemir-${AUVEMIR_VERSION}-screenshots.zip" docs/screenshots
       - name: Create reviewable draft release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          AUVEMIR_TAG: ${{ github.ref_name }}
         run: |
           find artifacts -type f ! -name SHA256SUMS -exec sha256sum {} \; > artifacts/SHA256SUMS
-          gh release create "$AUVEMIR_TAG" artifacts/* --draft --title "Auvemir ${AUVEMIR_TAG#v}" --notes-file CHANGELOG.md
+          release_target=()
+          if [[ -n "$AUVEMIR_RELEASE_TARGET" ]]; then
+            release_target=(--target "$AUVEMIR_RELEASE_TARGET")
+          else
+            release_target=(--verify-tag)
+          fi
+          gh release create "$AUVEMIR_TAG" artifacts/* "${release_target[@]}" --draft --title "Auvemir $AUVEMIR_VERSION" --notes-file CHANGELOG.md
