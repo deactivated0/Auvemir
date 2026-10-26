@@ -159,7 +159,8 @@ impl Providers {
         ]);
         let s = search.trim();
         if let Some(genre_id) = s.strip_prefix("genre:") {
-            url.query_pairs_mut().append_pair("genre_id", genre_id.trim());
+            url.query_pairs_mut()
+                .append_pair("genre_id", genre_id.trim());
         } else if !s.is_empty() {
             url.query_pairs_mut()
                 .append_pair("title", &format!("^{}", s));
@@ -486,7 +487,11 @@ mod tests {
     fn test_genres_defined() {
         let books = book_genres();
         assert!(!books.is_empty());
-        assert!(books.iter().any(|(id, name)| *id == "30" && *name == "Science Fiction"));
+        assert!(
+            books
+                .iter()
+                .any(|(id, name)| *id == "30" && *name == "Science Fiction")
+        );
 
         let podcasts = podcast_genres();
         assert!(!podcasts.is_empty());
