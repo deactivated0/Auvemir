@@ -1,0 +1,212 @@
+name: Finalize retained release packages
+on:
+  workflow_dispatch:
+    inputs:
+      artifact_run_id:
+        description: Completed release run containing the matching application binaries
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+jobs:
+  verify-ios:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check package provenance and unchanged application source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          AUVEMIR_ARTIFACT_RUN: ${{ inputs.artifact_run_id }}
+          AUVEMIR_VERIFY_SHA: ${{ github.sha }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          import subprocess
+          repo = os.environ["GH_REPO"]
+          run_id = os.environ["AUVEMIR_ARTIFACT_RUN"]
+          if not run_id.isdecimal():
+              raise SystemExit("The artifact run ID must be numeric")
+          def api(path):
+              return json.loads(subprocess.check_output(["gh", "api", f"repos/{repo}/{path}"], text=True))
+          run = api(f"actions/runs/{run_id}")
+          if run["status"] != "completed" or run["head_repository"]["full_name"] != repo or run["head_branch"] != "Main":
+              raise SystemExit("Artifacts must come from a completed Main run in this repository")
+          comparison = api(f"compare/{run['head_sha']}...{os.environ['AUVEMIR_VERIFY_SHA']}")
+          allowed = {".github/workflows/finalize.yml", "tests/verify_ios_simulator.py", "tests/ios_sim_decoder.py"}
+          changed = [item["filename"] for item in comparison["files"]]
+          if comparison["status"] not in ("ahead", "identical") or len(changed) >= 300 or any(path not in allowed for path in changed):
+              raise SystemExit(f"Application source differs from the retained binaries: {changed}")
+          jobs = api(f"actions/runs/{run_id}/jobs?per_page=100")["jobs"]
+          required = {
+              "source",
+              "build (ubuntu-24.04, linux-x86_64)", "build (ubuntu-24.04-arm, linux-aarch64)",
+              "build (windows-2025, windows-x86_64)", "build (macos-15-intel, macos-x86_64)",
+              "build (macos-15, macos-arm64)",
+              "mobile / android (arm64)", "mobile / android (x86_64)", "mobile / android (armv7)",
+          }
+          passed = {job["name"] for job in jobs if job["conclusion"] == "success"}
+          if not required <= passed:
+              raise SystemExit(f"Required retained jobs did not pass: {sorted(required - passed)}")
+          ios = next(job for job in jobs if job["name"] == "mobile / ios")
+          if not any(step["name"] == "Shared application and UIKit host" and step["conclusion"] == "success" for step in ios["steps"]):
+              raise SystemExit("The retained xtool device build did not pass")
+          artifacts = api(f"actions/runs/{run_id}/artifacts?per_page=100")["artifacts"]
+          if any(item["expired"] for item in artifacts):
+              raise SystemExit("A retained artifact has expired")
+          provenance = {
+              "application_build_run": int(run_id), "application_source_sha": run["head_sha"],
+              "verification_source_sha": os.environ["AUVEMIR_VERIFY_SHA"],
+              "validation_only_changes": changed,
+              "artifacts": [{"id": item["id"], "name": item["name"], "digest": item.get("digest")} for item in artifacts],
+          }
+          Path("docs/retained-build-provenance.json").write_text(json.dumps(provenance, indent=2) + "\n")
+          print(json.dumps(provenance, indent=2))
+          PY
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.artifact_run_id }}
+          name: auvemir-ios-unsigned
+          path: retained-ios
+      - name: Restore built iOS packages
+        run: |
+          cp -R retained-ios/dist .
+          mkdir -p dist/ios-simulator/Payload
+          ditto -x -k dist/Auvemir-ios-simulator.zip dist/ios-simulator/Payload
+      - name: Inspect iOS package
+        run: |
+          auvemir_inspection="$(mktemp -d)"
+          ditto -x -k dist/Auvemir-ios-unsigned.ipa "$auvemir_inspection"
+          auvemir_apps=("$auvemir_inspection"/Payload/*.app)
+          [[ "${#auvemir_apps[@]}" == 1 && -d "${auvemir_apps[0]}" ]]
+          auvemir_app="${auvemir_apps[0]}"
+          plutil -lint "$auvemir_app/Info.plist"
+          auvemir_executable="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$auvemir_app/Info.plist")"
+          [[ -n "$auvemir_executable" && "$auvemir_executable" != */* ]]
+          test -f "$auvemir_app/$auvemir_executable"
+          xcrun lipo "$auvemir_app/$auvemir_executable" -verify_arch arm64
+          file "$auvemir_app/$auvemir_executable"
+          python3 - "$auvemir_app/Info.plist" <<'PY'
+          import plistlib
+          import sys
+          from pathlib import Path
+          actual = plistlib.loads(Path(sys.argv[1]).read_bytes())
+          expected = plistlib.loads(Path("platforms/ios/Info.plist").read_bytes())
+          for key in ("CFBundleIdentifier", "CFBundleShortVersionString", "CFBundleVersion", "MinimumOSVersion"):
+              if actual.get(key) != expected[key]:
+                  raise SystemExit(f"Incorrect {key}: {actual.get(key)!r}; expected {expected[key]!r}")
+          if actual.get("CFBundlePackageType") != "APPL":
+              raise SystemExit("The IPA does not contain an application bundle")
+          PY
+          # The device IPA is intentionally unsigned; verify the ad hoc simulator bundle.
+          codesign --verify --deep --strict dist/ios-simulator/Payload/Auvemir.app
+      - name: Simulator fixture tools
+        run: brew install ffmpeg
+      - name: Recheck simulator and all codecs twice
+        run: |
+          for round in 1 2; do
+            python3 tests/verify_ios_simulator.py dist/ios-simulator/Payload/Auvemir.app
+            cp docs/ios-codec-results.json "docs/ios-codec-round-$round.json"
+            cp docs/ios-simulator-results.json "docs/ios-simulator-round-$round.json"
+          done
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: auvemir-ios-unsigned
+          path: |
+            dist/*.ipa
+            dist/*simulator.zip
+            docs/ios-*.json
+            docs/ios-simulator.png
+            docs/retained-build-provenance.json
+          if-no-files-found: error
+  source:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install 1.99.0 --profile minimal
+      - run: cargo +1.99.0 vendor --locked vendor > vendor-config.toml
+      - run: |
+          mkdir -p .cargo dist
+          mv vendor-config.toml .cargo/config.toml
+          tar --exclude=target --exclude=dist --exclude=.git -cJf dist/auvemir-corresponding-source.tar.xz .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: auvemir-corresponding-source
+          path: dist/*
+  release:
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+    needs: [verify-ios, source]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Download retained platform packages
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.artifact_run_id }}
+          path: artifacts
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Select release version and target
+        run: |
+          if [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]]; then
+            version="$(python3 -c 'import tomllib; print(tomllib.load(open("Cargo.toml", "rb"))["workspace"]["package"]["version"])')"
+            tag="v$version"
+            target="$GITHUB_SHA"
+          else
+            tag="$GITHUB_REF_NAME"
+            version="${tag#v}"
+            target=""
+          fi
+          printf 'AUVEMIR_TAG=%s\nAUVEMIR_VERSION=%s\nAUVEMIR_RELEASE_TARGET=%s\n' "$tag" "$version" "$target" >> "$GITHUB_ENV"
+      - name: Stage package files and reports
+        run: |
+          python3 - <<'PY'
+          from collections import Counter
+          from pathlib import Path
+          import shutil
+          files = [
+              (artifact.name, source)
+              for artifact in sorted(Path("artifacts").iterdir())
+              for source in sorted(artifact.rglob("*"))
+              if source.is_file() and source.name != "SHA256SUMS"
+          ]
+          if not files:
+              raise SystemExit("No release assets were downloaded")
+          counts = Counter(source.name for _, source in files)
+          output = Path("release-assets")
+          output.mkdir()
+          for artifact, source in files:
+              name = f"{artifact}-{source.name}" if counts[source.name] > 1 else source.name
+              destination = output / name
+              if destination.exists():
+                  raise SystemExit(f"Duplicate release asset: {name}")
+              shutil.copy2(source, destination)
+          PY
+      - name: Bundle section screenshots
+        run: zip -qr "release-assets/Auvemir-${AUVEMIR_VERSION}-screenshots.zip" docs/screenshots
+      - name: Create reviewable draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          (cd release-assets && sha256sum -- * > SHA256SUMS)
+          release_target=()
+          if [[ -n "$AUVEMIR_RELEASE_TARGET" ]]; then
+            release_target=(--target "$AUVEMIR_RELEASE_TARGET")
+          else
+            release_target=(--verify-tag)
+          fi
+          gh release create "$AUVEMIR_TAG" release-assets/* "${release_target[@]}" --draft --title "Auvemir $AUVEMIR_VERSION" --notes-file CHANGELOG.md
