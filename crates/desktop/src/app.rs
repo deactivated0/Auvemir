@@ -822,7 +822,10 @@ impl Worker {
             .and_then(|v| serde_json::from_str(&v).ok())
             .unwrap_or_default();
         let active_server = db.setting("active-server")?.or_else(|| {
-            servers.iter().find(|s| s.protocol == "invidious").map(|s| s.id.clone())
+            servers
+                .iter()
+                .find(|s| s.protocol == "invidious")
+                .map(|s| s.id.clone())
         });
         if let Some(gains) = db
             .setting("equalizer")?
@@ -1244,7 +1247,9 @@ impl Worker {
                 } else if p == 4 {
                     if let Ok(providers) = self.providers() {
                         self.status = "Loading popular podcasts…".into();
-                        self.job(async move { Ok(Command::Catalog(providers.podcasts("").await?)) });
+                        self.job(
+                            async move { Ok(Command::Catalog(providers.podcasts("").await?)) },
+                        );
                     }
                 }
             }
@@ -1465,11 +1470,7 @@ impl Worker {
                         } else {
                             format!("{} · {} · LibriVox", b.author, b.language)
                         };
-                        (
-                            format!("book:{}", b.id),
-                            b.title.clone(),
-                            sub,
-                        )
+                        (format!("book:{}", b.id), b.title.clone(), sub)
                     })
                     .collect();
                 self.view_dirty = true;
@@ -1742,7 +1743,9 @@ impl Worker {
                     self.status = format!("Loading radio stations for {country}…");
                     self.collections.clear();
                     self.job(async move {
-                        Ok(Command::Stations(p.radio(&format!("country:{country}")).await?))
+                        Ok(Command::Stations(
+                            p.radio(&format!("country:{country}")).await?,
+                        ))
                     });
                 } else if let Some(tag) = id.strip_prefix("radio-genre:") {
                     let tag = tag.to_string();
@@ -1758,16 +1761,16 @@ impl Worker {
                     self.status = "Loading audiobooks for genre…".into();
                     self.collections.clear();
                     self.job(async move {
-                        Ok(Command::Catalog(p.books(&format!("genre:{genre_id}")).await?))
+                        Ok(Command::Catalog(
+                            p.books(&format!("genre:{genre_id}")).await?,
+                        ))
                     });
                 } else if let Some(genre) = id.strip_prefix("podcast-genre:") {
                     let genre = genre.to_string();
                     let p = self.providers()?;
                     self.status = format!("Loading podcasts for {genre}…");
                     self.collections.clear();
-                    self.job(async move {
-                        Ok(Command::Catalog(p.podcasts(&genre).await?))
-                    });
+                    self.job(async move { Ok(Command::Catalog(p.podcasts(&genre).await?)) });
                 } else if let Some(id) = id.strip_prefix("book:") {
                     let b = self
                         .books
@@ -2921,7 +2924,9 @@ impl Worker {
                     let countries = p.radio_countries().await?;
                     let cols = countries
                         .into_iter()
-                        .map(|(c, count)| (format!("radio-country:{c}"), c, format!("{count} stations")))
+                        .map(|(c, count)| {
+                            (format!("radio-country:{c}"), c, format!("{count} stations"))
+                        })
                         .collect();
                     Ok(Command::Collections(cols))
                 });
@@ -2933,7 +2938,9 @@ impl Worker {
                     let tags = p.radio_tags().await?;
                     let cols = tags
                         .into_iter()
-                        .map(|(t, count)| (format!("radio-genre:{t}"), t, format!("{count} stations")))
+                        .map(|(t, count)| {
+                            (format!("radio-genre:{t}"), t, format!("{count} stations"))
+                        })
                         .collect();
                     Ok(Command::Collections(cols))
                 });
@@ -2958,7 +2965,13 @@ impl Worker {
             "books-genres" => {
                 self.collections = auvemir_core::providers::book_genres()
                     .iter()
-                    .map(|(id, name)| (format!("book-genre:{id}"), (*name).to_string(), "LibriVox genre".to_string()))
+                    .map(|(id, name)| {
+                        (
+                            format!("book-genre:{id}"),
+                            (*name).to_string(),
+                            "LibriVox genre".to_string(),
+                        )
+                    })
                     .collect();
                 self.view.clear();
                 self.view_dirty = true;
@@ -2972,7 +2985,13 @@ impl Worker {
             "podcasts-genres" => {
                 self.collections = auvemir_core::providers::podcast_genres()
                     .iter()
-                    .map(|name| (format!("podcast-genre:{name}"), (*name).to_string(), "Podcast genre".to_string()))
+                    .map(|name| {
+                        (
+                            format!("podcast-genre:{name}"),
+                            (*name).to_string(),
+                            "Podcast genre".to_string(),
+                        )
+                    })
                     .collect();
                 self.view.clear();
                 self.view_dirty = true;
