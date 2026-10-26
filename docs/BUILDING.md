@@ -7,7 +7,7 @@ Use Rust **1.99.0**, C/C++, CMake, Clang/libclang and native audio/font/window d
 Debian/Ubuntu:
 
 ```sh
-sudo apt install build-essential cmake clang libclang-dev pkg-config libasound2-dev libfontconfig1-dev libxkbcommon-dev libx11-dev
+sudo apt install build-essential cmake clang libclang-dev pkg-config libasound2-dev libfontconfig1-dev libxkbcommon-dev libxkbcommon-x11-0 libx11-dev
 cargo build --locked --release -p auvemir -j 2
 ./target/release/auvemir
 ```
@@ -15,7 +15,7 @@ cargo build --locked --release -p auvemir -j 2
 Arch/CachyOS:
 
 ```sh
-sudo pacman -S --needed rust cmake clang pkgconf alsa-lib fontconfig freetype2 libxkbcommon libx11
+sudo pacman -S --needed rust cmake clang pkgconf alsa-lib fontconfig freetype2 libxkbcommon libxkbcommon-x11 libx11
 cargo build --locked --release -p auvemir -j 2
 ```
 

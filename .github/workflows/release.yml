@@ -25,7 +25,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Linux build dependencies
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y cmake clang libclang-dev pkg-config libasound2-dev libfontconfig1-dev libxkbcommon-dev libx11-dev rpm zstd ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y cmake clang libclang-dev pkg-config libasound2-dev libfontconfig1-dev libxkbcommon-dev libxkbcommon-x11-0 libx11-dev rpm zstd ffmpeg
       - name: macOS build dependencies
         if: runner.os == 'macOS'
         run: |

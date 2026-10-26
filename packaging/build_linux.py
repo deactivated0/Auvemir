@@ -77,7 +77,7 @@ Priority: optional
 Architecture: {DEB_ARCH}
 Maintainer: Auvemir contributors <maintainers@auvemir.invalid>
 Installed-Size: {sum(p.stat().st_size for p in root.rglob('*') if p.is_file()) // 1024}
-Depends: libc6 (>= 2.39), libgcc-s1, libstdc++6, libasound2t64 | libasound2, libfontconfig1, libfreetype6, libxkbcommon0, libx11-6
+Depends: libc6 (>= 2.39), libgcc-s1, libstdc++6, libasound2t64 | libasound2, libfontconfig1, libfreetype6, libxkbcommon0, libxkbcommon-x11-0, libx11-6
 Recommends: xdg-desktop-portal
 Suggests: ffmpeg
 Description: Auvemir music and spoken-audio player
@@ -100,6 +100,7 @@ depend = alsa-lib
 depend = fontconfig
 depend = freetype2
 depend = libxkbcommon
+depend = libxkbcommon-x11
 depend = libx11
 depend = gcc-libs
 depend = glibc>=2.39
@@ -140,7 +141,7 @@ Summary: Native music and spoken-audio player
 License: GPL-3.0-only
 BuildArch: {ARCH}
 AutoReqProv: no
-Requires: alsa-lib, fontconfig, freetype, libxkbcommon, libX11, libstdc++, glibc >= 2.39
+Requires: alsa-lib, fontconfig, freetype, libxkbcommon, libxkbcommon-x11, libX11, libstdc++, glibc >= 2.39
 %description
 Auvemir plays music, books, podcasts, radio and ambient audio with Rust and Slint.
 %install

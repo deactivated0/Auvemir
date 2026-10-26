@@ -69,7 +69,7 @@ On Debian/Ubuntu:
 git clone https://github.com/deactivated0/Auvemir.git
 cd Auvemir
 rustup toolchain install 1.99.0 --profile minimal --component rustfmt --component clippy
-sudo apt install build-essential cmake clang libclang-dev pkg-config libasound2-dev libfontconfig1-dev libxkbcommon-dev libx11-dev
+sudo apt install build-essential cmake clang libclang-dev pkg-config libasound2-dev libfontconfig1-dev libxkbcommon-dev libxkbcommon-x11-0 libx11-dev
 cargo +1.99.0 build --locked --release -p auvemir -j 2
 ./target/release/auvemir
 ```

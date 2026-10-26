@@ -1,8 +1,11 @@
+#[cfg(unix)]
+use auvemir_core::library;
 use auvemir_core::{
     database::Store,
-    library::{self, Scanned},
+    library::Scanned,
     model::{Media, MediaKind, MediaSort},
 };
+#[cfg(unix)]
 use std::{
     collections::HashMap,
     sync::{Arc, atomic::AtomicBool},
@@ -111,7 +114,7 @@ fn invalid_timestamp_does_not_abort_other_files() {
     assert_eq!(scan.errors.len(), 1);
 }
 
-#[cfg(unix)]
+#[cfg(target_os = "linux")]
 #[test]
 fn malformed_path_warnings_are_bounded() {
     use std::{ffi::OsString, os::unix::ffi::OsStringExt};

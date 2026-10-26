@@ -47,6 +47,17 @@ def build(tool=None, runtime=None):
         (app / ".DirIcon").symlink_to("auvemir.svg")
         # Never bundle glibc, the loader, graphics drivers, or desktop session services.
         native = subprocess.check_output(["ldd", str(ROOT / "target/release/auvemir")], text=True)
+        # Winit loads this X11 keyboard library with dlopen, so executable ldd
+        # output alone omits it and its XCB dependencies.
+        catalog = subprocess.check_output([shutil.which("ldconfig") or "/sbin/ldconfig", "-p"], text=True)
+        architecture = {"x86_64": "x86-64", "aarch64": "AArch64"}.get(arch)
+        plugin = next((Path(line.rsplit(" => ", 1)[1]) for line in catalog.splitlines()
+                       if line.strip().startswith("libxkbcommon-x11.so.0 ") and " => " in line
+                       and (architecture is None or architecture in line)), None)
+        if plugin is None or not plugin.is_file():
+            raise RuntimeError("Install libxkbcommon-x11 before building the AppImage")
+        native += f"\nlibxkbcommon-x11.so.0 => {plugin}\n"
+        native += subprocess.check_output(["ldd", str(plugin)], text=True)
         allowed = ("libasound", "libfontconfig", "libfreetype", "libxkbcommon", "libX11", "libXau", "libXdmcp", "libxcb", "libexpat", "libpng", "libbz2", "libz.so", "libbrotli", "libffi", "libuuid")
         libs = app / "usr/lib"
         libs.mkdir()
