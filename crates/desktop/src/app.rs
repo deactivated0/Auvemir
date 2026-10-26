@@ -4143,11 +4143,15 @@ impl Worker {
         let count = self.db.count()? as i32;
         let page = self.page;
         let offset = self.offset as i32;
-        let next_page_enabled = if page == 2 {
-            self.remote_has_more
-        } else {
-            self.view.len() == 100
-        };
+        let paginated = self.playlist_filter.is_none() && !matches!(page, 0 | 8 | 11);
+        let pagination_visible =
+            paginated && (self.view.len() == 100 || offset > 0 || self.remote_has_more);
+        let next_page_enabled = paginated
+            && if page == 2 {
+                self.remote_has_more
+            } else {
+                self.view.len() == 100
+            };
         let record = self.recorder.is_some();
         let recording_paused = self.recorder.as_ref().is_some_and(|r| r.paused);
         crate::platform::recording(record, recording_paused);
@@ -4181,6 +4185,7 @@ impl Worker {
             u.set_page(page);
             u.set_page_offset(offset);
             u.set_next_page_enabled(next_page_enabled);
+            u.set_pagination_visible(pagination_visible);
             u.set_heading(heading.into());
             u.set_subheading(subheading.into());
             u.set_status(status.into());

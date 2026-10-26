@@ -62,6 +62,13 @@ def main():
                 for index in range(gif.n_frames): gif.seek(index);gif.load()
                 assert gif.n_frames >= 50
             animation.replace(output/"navigation.gif")
-        manifest={"source_sha256":source_digest(),"version":subprocess.check_output([str(binary),"--version"],text=True).strip(),"renderer":"Actual Slint 1.18.1 winit software renderer on Linux/Xvfb", "fixture":"12 generated 45-second quiet sine tones and procedural covers; no commercial media", "limitations":"Phone layout rendered on Linux, not physical-device certification. Playback uses a null ALSA sink, not a physical audio measurement. The GIF is a recording, not an FPS benchmark.","files":{p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(output.iterdir()) if p.suffix in (".png",".gif")}}
+        # Remove owned intermediate encodings before publishing the gallery manifest.
+        for leftover in output.glob("*.optimized.png"): leftover.unlink(missing_ok=True)
+        for leftover in output.glob("*.partial.gif"): leftover.unlink(missing_ok=True)
+        for asset in output.iterdir():
+            if asset.suffix in (".png", ".gif"):
+                with Image.open(asset) as decoded:
+                    for index in range(getattr(decoded, "n_frames", 1)): decoded.seek(index);decoded.load()
+        manifest={"source_sha256":source_digest(),"binary_sha256":hashlib.sha256(binary.read_bytes()).hexdigest(),"version":subprocess.check_output([str(binary),"--version"],text=True).strip(),"renderer":"Actual Slint 1.18.1 winit software renderer on Linux/Xvfb", "fixture":"12 generated 45-second quiet sine tones and procedural covers; no commercial media", "limitations":"Phone layout rendered on Linux, not physical-device certification. Playback uses a null ALSA sink, not a physical audio measurement. The GIF is a recording, not an FPS benchmark.","files":{p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(output.iterdir()) if p.suffix in (".png",".gif")}}
         (output/"manifest.json").write_text(json.dumps(manifest,indent=2)+"\n");print(json.dumps(manifest,indent=2))
 if __name__=="__main__":main()

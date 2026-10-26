@@ -1,17 +1,18 @@
 {
-  "source_sha256": "fbe23cb650e59d76de0edfa78372b7a3bdf60561d9a594baa2f88360f0497302",
+  "source_sha256": "abbf2a1cb39684e3aab7547f6a1eee6f293d929d82dca1d273f64aa54a4d544e",
+  "binary_sha256": "cdfa97e710d863c5404f138f26ebf4f47b15e651f4cc0990381ad9f2f071ed6c",
   "version": "Auvemir 0.1.0",
   "renderer": "Actual Slint 1.18.1 winit software renderer on Linux/Xvfb",
   "fixture": "12 generated 45-second quiet sine tones and procedural covers; no commercial media",
   "limitations": "Phone layout rendered on Linux, not physical-device certification. Playback uses a null ALSA sink, not a physical audio measurement. The GIF is a recording, not an FPS benchmark.",
   "files": {
     "desktop-equalizer.png": "094688536f1668252b872e7194a75dd059242563f76c780455fc143f441fb9ec",
-    "desktop-home.png": "c11cad441d0d7ed8e635ea480baa2240f477ea89b8f52daf48484e668444a0f6",
-    "desktop-library.png": "f1f246b915f43b490651bfeb02ecf1bcfe8b08be323c19a9f1684445f19908ee",
-    "desktop-light.png": "143f23658a5965a779591bd589ead8f160628ad1c08e61b0f11080de037a3d77",
-    "navigation.gif": "271c84133d7845df2d659cf2ddbcc2fbc26cda632516e7569e7c6b68d6dfea87",
-    "phone-home.png": "a76414fbbc360dbdf362f41089d0417b46a1f2b406f41b1f89405e68c42de91a",
-    "phone-library.png": "c3fd221a034136496b698c55d7e51d096d9055a2c8e2c99e838c06d9fbc37c8b",
+    "desktop-home.png": "ca06b61707579a451f50e1d90a236c5f9701e45f05b141503a7023614c2108bd",
+    "desktop-library.png": "ff7114bdfb20745e61b66dd3de86aa31b2ce8a65978c716c10bbbb978d815145",
+    "desktop-light.png": "6a4f26035a2e3f7ce0b9542612897d9c980bf965a618f59dd6fa7617c4785b20",
+    "navigation.gif": "06fb8f06c40ad7bbd74b451e53fe2c1561972f9d0ecb8555fa971d050f0013a1",
+    "phone-home.png": "d5c0a7a574dc39f302450786ba7e75ef9ce5da55d41cd72046b967551d5326ff",
+    "phone-library.png": "a68ebcab36d235f94c2c0ad0bedaf76ed910f4fb011c2810dd7702f8a182a0b5",
     "phone-player.png": "5d8cddf6e48b15c8b8f61e15b4c4ea2d95ab98f6278819bb138bf88107df11a4",
     "settings-appearance.png": "1d42017c3aa11caeceb09b31be9ee6bdb0274f6c264968ec9cd46817bd6c65aa"
   }

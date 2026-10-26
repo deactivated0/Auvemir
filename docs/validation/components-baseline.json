@@ -1,0 +1,43 @@
+{
+  "source_sha256": "abbf2a1cb39684e3aab7547f6a1eee6f293d929d82dca1d273f64aa54a4d544e",
+  "architecture": "x86_64",
+  "queue": {
+    "output_blake3": "cafaeee05438c36108bf814135c09a6501f4e75a78b7abd50a7a390ebc26843d",
+    "queue_restore_ms": [
+      29.929924,
+      29.237693,
+      31.024359,
+      30.355983,
+      31.931347,
+      30.467337,
+      30.378315999999998
+    ],
+    "three_sorted_pages_ms": [
+      7.912135000000001,
+      6.813985,
+      6.5943499999999995,
+      6.998377,
+      6.8465929999999995,
+      7.218192,
+      6.768998
+    ],
+    "tracks": 5000
+  },
+  "artwork": {
+    "handoffs": 5000,
+    "milliseconds": [
+      19.979011,
+      15.303492,
+      14.573495000000001,
+      14.635125,
+      14.660373000000002,
+      14.682214,
+      14.445636
+    ],
+    "size": [
+      192,
+      192
+    ]
+  },
+  "method": "Seven in-process samples per workload in release mode. 5000 queue items, 5000 handoffs of a decoded 192x192 RGBA thumbnail. Exact restored media/cursor and image pixels are asserted. Component latency is not whole-app or hardware FPS."
+}

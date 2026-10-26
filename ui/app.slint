@@ -159,7 +159,7 @@ component QuickCard inherits Rectangle {
         if root.symbol != "♥" && root.symbol != "♬": Text { text: root.symbol; color: Design.text; font-size: 24px; horizontal-alignment: center; }
     } Text { text: root.text; color: Design.muted; font-size: 10px; wrap: word-wrap; horizontal-alignment: center; } }
     touch := TouchArea { clicked => {root.triggered();} }
-    FocusScope { key-pressed(event) => {if(event.text=="\n" || event.text==" "){root.triggered();return accept;}return reject;} }
+    FocusScope { focus-on-click: false; key-pressed(event) => {if(event.text=="\n" || event.text==" "){root.triggered();return accept;}return reject;} }
 }
 
 export component MainWindow inherits Window {
@@ -243,6 +243,7 @@ export component MainWindow inherits Window {
     in property <int> library-count: 0;
     in property <int> page-offset: 0;
     in property <bool> next-page-enabled: false;
+    in property <bool> pagination-visible: false;
     in-out property <string> import-path;
     in-out property <string> feed-url;
     in-out property <string> search-query;
@@ -671,6 +672,7 @@ export component MainWindow inherits Window {
                             height: root.mobile ? 76px : 70px; border-radius: 6px;
                             background: track.id == root.current-id ? Design.accent-soft : row-touch.has-hover ? Design.surface : Design.sidebar;
                             border-width: 1px; border-color: track.id == root.current-id || row-focus.has-focus ? Design.accent : Design.border;
+                            row-focus := FocusScope { focus-on-click: false; key-pressed(event) => { if(event.text=="\n"){root.play-track(track.id);return accept;}if(event.text==" "){if(track.id==root.current-id){root.action("toggle");}else{root.play-track(track.id);}return accept;}return reject;} }
                             row-touch := TouchArea { x: 0px; y: 0px; width: parent.width; height: parent.height; clicked => {row-focus.focus();root.play-track(track.id);} }
                             HorizontalLayout { spacing: 12px; padding-left: 6px; padding-right: 6px; padding-top: root.mobile ? 16px : 13px; padding-bottom: root.mobile ? 16px : 13px;
                                 Rectangle { width: 44px; horizontal-stretch: 0; Cover { x: 0px; y: (parent.height - self.height)/2; title: track.title; kind: track.kind; artwork: track.artwork; width: 44px; height: 44px; } }
@@ -690,10 +692,9 @@ export component MainWindow inherits Window {
                             }
                             accessible-role: button; accessible-label: track.title + " by " + track.artist;
                             accessible-action-default => {root.play-track(track.id);}
-                            row-focus := FocusScope { key-pressed(event) => { if(event.text=="\n"){root.play-track(track.id);return accept;}if(event.text==" "){if(track.id==root.current-id){root.action("toggle");}else{root.play-track(track.id);}return accept;}return reject;} }
                         }
                     }
-                    if root.tracks.length == 100 || root.page-offset > 0 || root.next-page-enabled: HorizontalLayout { Action { text: "Previous page"; enabled: root.page-offset > 0; triggered => {root.action("page-prev");} } Action { text: "Next page"; enabled: root.next-page-enabled; triggered => {root.action("page-next");} } Rectangle {} }
+                    if root.pagination-visible: HorizontalLayout { Action { text: "Previous page"; enabled: root.page-offset > 0; triggered => {root.action("page-prev");} } Action { text: "Next page"; enabled: root.next-page-enabled; triggered => {root.action("page-next");} } Rectangle {} }
                     Text { text: root.status; color: Design.muted; wrap: word-wrap; font-size: 12px; }
                 }
             }
@@ -800,6 +801,7 @@ export component MainWindow inherits Window {
             LineEdit { text <=> root.station-logo; placeholder-text: "Logo URL (optional)"; height: 40px; }
             HorizontalLayout { Action { text: "Save station"; light: true; triggered => {root.save-station(root.station-id,root.station-name,root.station-url,root.station-country,root.station-language,root.station-tags,root.station-logo);} } Action { text: "Cancel"; triggered => {root.radio-editor=false;} } Rectangle {} }
             if root.station-id != "": Action { text: "Delete custom"; triggered => {root.delete-station(root.station-id);} }
+            Text { text: root.status; color: Design.muted; wrap: word-wrap; }
             Text { text: "Edits stay in your local collection. Public directory records are never changed."; color: Design.muted; wrap: word-wrap; }
         } }
     }

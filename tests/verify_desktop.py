@@ -29,25 +29,26 @@ def main():
                     result=subprocess.run(["xdotool","search","--onlyvisible","--name","^Auvemir$"],env=env,capture_output=True,text=True)
                     return result.stdout.strip().splitlines()[-1] if result.returncode==0 else None
                 window=wait_for(window_id);input_command(env,"windowsize","--sync",window,1180,780);input_command(env,"windowfocus",window);time.sleep(.4)
-                def key(value): input_command(env,"key","--clearmodifiers",value);time.sleep(.25)
-                def click(x,y): input_command(env,"mousemove","--window",window,x,y,"click",1);time.sleep(.25)
+                def key(value): input_command(env,"windowfocus","--sync",window);input_command(env,"key","--clearmodifiers",value);time.sleep(.25)
+                def click(x,y): input_command(env,"windowfocus","--sync",window);input_command(env,"mousemove","--window",window,x,y);time.sleep(.1);input_command(env,"click",1);time.sleep(.25)
                 key("ctrl+2")
                 # Current desktop geometry: header, title, import area, sort, rows.
                 click(470,334);key("Home");key("Down");key("Down");key("Escape");click(450,100)
                 wait_for(lambda: scalar("SELECT value FROM settings WHERE key='library-sort'")=="2");checks.append("native sort control persists artist order")
                 click(1028,458);wait_for(lambda: scalar("SELECT count(*) FROM media WHERE favorite=1")==1);checks.append("native favorite action")
-                click(1072,458);wait_for(lambda: scalar("SELECT value FROM settings WHERE key='queue'") is not None);checks.append("native add to queue")
+                click(1072,458);wait_for(lambda: len(json.loads(scalar("SELECT value FROM settings WHERE key='queue'") or "[[],0]")[0]) == 1);checks.append("native add to queue")
                 click(400,458);wait_for(lambda: scalar("SELECT count(*) FROM history")>0);checks.append("actual decode/output pipeline through null ALSA sink")
                 key("ctrl+comma");click(500,194);key("Home");key("Down");key("Escape");click(450,100)
                 click(330,320);wait_for(lambda: scalar("SELECT value FROM settings WHERE key='appearance-light'")=="true")
                 click(420,411);wait_for(lambda: scalar("SELECT value FROM settings WHERE key='motion-reduced'")=="true");checks.append("native light/reduced-motion preference controls")
-                key("ctrl+slash");key("Escape");key("ctrl+f");input_command(env,"type","--clearmodifiers","Drift");key("Return");assert app.poll() is None;checks.append("keyboard guide, escape and search remain responsive")
+                key("ctrl+slash");key("Escape");key("ctrl+f");input_command(env,"type","--clearmodifiers","Drift");key("Return");assert app.poll() is None;checks.append("keyboard guide/escape/search shortcut sequence remains responsive")
                 key("ctrl+q");assert app.wait(timeout=5)==0;checks.append("keyboard quit and normal worker cleanup")
             finally:
                 if app.poll() is None: app.kill();app.wait()
         capture(binary,env,folder/"restart.png",page=11,settings=1)
         assert scalar("SELECT value FROM settings WHERE key='appearance-light'")=="true"
         assert scalar("SELECT value FROM settings WHERE key='motion-reduced'")=="true"
+        assert scalar("SELECT value FROM settings WHERE key='library-sort'")=="2"
         assert Image.open(folder/"restart.png").getpixel((1150,100))[:3]==(244,245,242)
         checks.append("saved appearance, motion and sort survive restart")
         for width,height,scale in [(320,640,1),(390,844,1),(720,720,1),(1180,780,1),(1180,780,1.5),(1440,900,1)]:
