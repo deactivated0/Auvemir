@@ -25,13 +25,7 @@ def main():
         run(['xcrun','simctl','io',device,'screenshot',ROOT/'docs/ios-simulator.png'])
         container=subprocess.check_output(['xcrun','simctl','get_app_container',device,'org.auvemir.app','data'],text=True).strip()
         wrapper=ROOT/'target/ios-sim-decoder';wrapper.parent.mkdir(exist_ok=True)
-        wrapper.write_text('''#!/usr/bin/env python3
-import os,pathlib,shutil,subprocess,sys
-source=pathlib.Path(sys.argv[2]);destination=pathlib.Path(os.environ['AUVEMIR_SIMULATOR_DATA'])/'Documents'/source.name
-destination.parent.mkdir(exist_ok=True);shutil.copyfile(source,destination)
-result=subprocess.run(['xcrun','simctl','launch','--console','--terminate-running-process',os.environ['AUVEMIR_SIMULATOR_ID'],'org.auvemir.app','--decode',str(destination)],capture_output=True,text=True)
-sys.stdout.write(result.stdout);sys.stderr.write(result.stderr);sys.exit(result.returncode)
-''');wrapper.chmod(0o700)
+        wrapper.write_text((ROOT/'tests/ios_sim_decoder.py').read_text());wrapper.chmod(0o700)
         env={**os.environ,'AUVEMIR_SIMULATOR_ID':device,'AUVEMIR_SIMULATOR_DATA':container}
         run(['python3',ROOT/'tests/verify_codecs.py',wrapper,'--report',ROOT/'docs/ios-codec-results.json'],env=env)
         report['native_codecs']=True
