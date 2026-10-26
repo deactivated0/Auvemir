@@ -2,7 +2,7 @@ use anyhow::{Result, bail};
 use reqwest::dns::{Addrs, Name, Resolve, Resolving};
 use std::{
     net::{IpAddr, SocketAddr, ToSocketAddrs},
-    sync::Arc,
+    sync::{Arc, OnceLock},
     time::Duration,
 };
 use url::{Host, Url};
@@ -80,6 +80,23 @@ impl Resolve for PublicDns {
     }
 }
 pub fn client(allow_local: bool) -> Result<reqwest::Client> {
+    if allow_local {
+        return build_client(true);
+    }
+
+    // Public catalog, metadata, artwork, and media requests share one connection
+    // pool. Local server clients keep their separate redirect and DNS policy.
+    static PUBLIC_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
+    if let Some(client) = PUBLIC_CLIENT.get() {
+        return Ok(client.clone());
+    }
+
+    let client = build_client(false)?;
+    let _ = PUBLIC_CLIENT.set(client.clone());
+    Ok(PUBLIC_CLIENT.get().cloned().unwrap_or(client))
+}
+
+fn build_client(allow_local: bool) -> Result<reqwest::Client> {
     let mut b = reqwest::Client::builder()
         .user_agent("Auvemir/0.1 (open-source audio player)")
         .connect_timeout(Duration::from_secs(12))
