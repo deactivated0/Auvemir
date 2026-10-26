@@ -1,12 +1,7 @@
-use std::{
-    collections::{HashMap, VecDeque},
-    sync::Arc,
-};
+use std::collections::{HashMap, VecDeque};
 #[derive(Clone, Default)]
 pub struct Artwork {
-    pub pixels: Arc<Vec<u8>>,
-    pub width: u32,
-    pub height: u32,
+    pixels: Option<slint::SharedPixelBuffer<slint::Rgba8Pixel>>,
 }
 pub fn cached_path(base: &std::path::Path, url: &str) -> std::path::PathBuf {
     base.join("remote-artwork").join(format!(
@@ -69,16 +64,11 @@ pub async fn fetch(
 }
 impl Artwork {
     pub fn image(&self) -> slint::Image {
-        if self.width == 0 {
-            return slint::Image::default();
-        }
-        slint::Image::from_rgba8(
-            slint::SharedPixelBuffer::<slint::Rgba8Pixel>::clone_from_slice(
-                self.pixels.as_slice(),
-                self.width,
-                self.height,
-            ),
-        )
+        // Slint shares immutable pixels with the UI; mutable consumers use copy-on-write.
+        self.pixels
+            .as_ref()
+            .map(|pixels| slint::Image::from_rgba8(pixels.clone()))
+            .unwrap_or_default()
     }
 }
 #[derive(Default)]
@@ -114,9 +104,11 @@ impl Cache {
             reader.limits(limits);
             let thumb = reader.decode().ok()?.thumbnail(192, 192).into_rgba8();
             Some(Artwork {
-                width: thumb.width(),
-                height: thumb.height(),
-                pixels: Arc::new(thumb.into_raw()),
+                pixels: Some(slint::SharedPixelBuffer::clone_from_slice(
+                    thumb.as_raw(),
+                    thumb.width(),
+                    thumb.height(),
+                )),
             })
         })()
         .unwrap_or_default();

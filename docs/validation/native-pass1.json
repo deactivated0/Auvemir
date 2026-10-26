@@ -1,0 +1,27 @@
+{
+  "source_sha256": "12d26d237924cde04e28d25fb8e6286d56741e1ba1b5c59cc52e8d197c6957a3",
+  "binary_bytes": 43902792,
+  "queue_tracks": 5000,
+  "samples": [
+    {
+      "wall_ms": 1097.3628199990344,
+      "cpu_ms": 173.027,
+      "peak_rss_kib": 50392,
+      "capture_sha256": "bb0ef87dfe39d96a9536d82e196f2a6ab669296e1505c701e7293fb223c69ad7"
+    },
+    {
+      "wall_ms": 1118.6299630007852,
+      "cpu_ms": 155.627,
+      "peak_rss_kib": 50512,
+      "capture_sha256": "bb0ef87dfe39d96a9536d82e196f2a6ab669296e1505c701e7293fb223c69ad7"
+    },
+    {
+      "wall_ms": 1125.5604849993688,
+      "cpu_ms": 159.299,
+      "peak_rss_kib": 49952,
+      "capture_sha256": "bb0ef87dfe39d96a9536d82e196f2a6ab669296e1505c701e7293fb223c69ad7"
+    }
+  ],
+  "method": "Three isolated runs, warm OS cache, same generated metadata and artwork, restored 5000-track queue, native software rendering, 1000 ms capture timer. Wall time includes the fixed timer and PNG encoding. CPU covers startup/idle/render together, not pure idle. RSS is wait4 child peak. No audio hardware or FPS measurement.",
+  "provenance": "Recovered verbatim measurements from the completed pre-pause execution. Restored source digest was verified before this record was saved."
+}

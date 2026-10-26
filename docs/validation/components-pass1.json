@@ -1,0 +1,44 @@
+{
+  "source_sha256": "12d26d237924cde04e28d25fb8e6286d56741e1ba1b5c59cc52e8d197c6957a3",
+  "architecture": "x86_64",
+  "queue": {
+    "output_blake3": "cafaeee05438c36108bf814135c09a6501f4e75a78b7abd50a7a390ebc26843d",
+    "queue_restore_ms": [
+      34.060414,
+      32.408256,
+      34.488977,
+      35.304731,
+      38.414729,
+      46.458881,
+      44.36029
+    ],
+    "three_sorted_pages_ms": [
+      10.793248,
+      12.798058,
+      13.359475,
+      11.89569,
+      8.831973,
+      9.291782,
+      8.058022
+    ],
+    "tracks": 5000
+  },
+  "artwork": {
+    "handoffs": 5000,
+    "milliseconds": [
+      0.028332,
+      0.02753,
+      0.026309,
+      0.189049,
+      0.02025,
+      0.02034,
+      0.0205
+    ],
+    "size": [
+      192,
+      192
+    ]
+  },
+  "method": "Seven in-process samples per workload in release mode. 5000 queue items, 5000 handoffs of a decoded 192x192 RGBA thumbnail. Exact restored media/cursor and image pixels are asserted. Component latency is not whole-app or hardware FPS.",
+  "provenance": "Recovered verbatim measurements from the completed pre-pause execution. Restored source digest was verified before this record was saved."
+}

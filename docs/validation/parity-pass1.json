@@ -1,0 +1,17 @@
+{
+  "static_captures_identical_pixels": {
+    "desktop-home.png": true,
+    "desktop-library.png": true,
+    "desktop-light.png": true,
+    "desktop-equalizer.png": true,
+    "settings-appearance.png": true,
+    "phone-home.png": true,
+    "phone-library.png": true,
+    "phone-player.png": true
+  },
+  "large_library_capture_identical": true,
+  "queue_output_identical": true,
+  "subtitle_and_control_source_unchanged": true,
+  "comparison": "Exact RGBA byte equality, including all color and alpha channels",
+  "provenance": "These assertions passed before the pause on the recorded source digests; final-source verification is rerun separately."
+}
