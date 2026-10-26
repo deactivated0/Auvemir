@@ -8,6 +8,7 @@ The optimization changes preserve media values, revisions, settings, protocol fo
 2. Repeated sync and setting SQL was parsed for every record. Cached prepared statements reuse SQLite parsing while still reading current persistent values. No setting-value cache was introduced.
 3. A visible library page issued one download query per row. The batched path returns the same valid stored-path indicators in one parameterized JSON-table query; error fallback preserves individual-query behavior.
 4. The second review shortened the lifetimes of media/progress maps and the previous sync snapshot before constructing the final snapshot. This reduces simultaneous allocations without changing traversal order, revision allocation or merge semantics.
+5. Each request for a public HTTP client created a fresh client and connection pool. Reusing one public client lets catalog, metadata, artwork, and media requests retain HTTP connections across calls. Requests configured to allow local servers still use an isolated client with the same redirect and DNS policy as before.
 
 ## Measured component workload
 
@@ -26,6 +27,8 @@ The observed first-sync improvement is 10.38×; peak RSS is 12.4% lower. All run
 Regression coverage compares batched flags with legacy queries (including duplicate/missing/Unicode IDs and malformed database paths), verifies cached settings see updates/deletion, checks the counter index query plan, and exercises encrypted sync, conflict resolution, tombstones and unresolved media. The recovered workspace has 67 passing Rust tests, including UI attachment replacement and retained Application context lifecycles. Desktop and Android ARM64 Clippy pass; Android Java/DEX and independent focus-event sequence tests pass. Device checks are recorded separately.
 
 Audio buffer sizes, codec output, EQ/speed algorithms, recording behavior, encryption wire format/Argon2 parameters, network authentication/redirect policies and UI timer cadence were intentionally retained. Broader audio-device, battery and mobile lifecycle profiles require platform hardware. No claim of absolute maximum performance or universal speedup is made.
+
+The shared public HTTP client avoids rebuilding connection pools. This change is structural; it does not claim a measured network latency improvement.
 
 ## Further review after the first pass
 
