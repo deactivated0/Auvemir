@@ -78,7 +78,7 @@ jobs:
           auvemir_executable="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$auvemir_app/Info.plist")"
           [[ -n "$auvemir_executable" && "$auvemir_executable" != */* ]]
           test -f "$auvemir_app/$auvemir_executable"
-          xcrun lipo -verify_arch arm64 "$auvemir_app/$auvemir_executable"
+          xcrun lipo "$auvemir_app/$auvemir_executable" -verify_arch arm64
           file "$auvemir_app/$auvemir_executable"
           python3 - "$auvemir_app/Info.plist" <<'PY'
           import plistlib
@@ -95,6 +95,7 @@ jobs:
           # The device IPA is intentionally unsigned; verify the ad hoc simulator bundle.
           codesign --verify --deep --strict dist/ios-simulator/Payload/Auvemir.app
       - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
         with:
           name: auvemir-ios-unsigned
           path: |
