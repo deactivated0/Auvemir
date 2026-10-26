@@ -7,7 +7,7 @@ from create_demo_library import create
 from native_session import ROOT, display, input_command, profile_environment, source_digest, wait_for
 
 def capture(binary, env, output, page=None, mobile=False, settings=None, player=False, argument=None, width=1180,height=780):
-    current=env.copy();current.update(AUVEMIR_SCREENSHOT=str(output),AUVEMIR_SCREENSHOT_WIDTH=str(390 if mobile else width),AUVEMIR_SCREENSHOT_HEIGHT=str(844 if mobile else height))
+    current=env.copy();current.update(AUVEMIR_SCREENSHOT=str(output),AUVEMIR_SCREENSHOT_WIDTH=str(390 if mobile else width),AUVEMIR_SCREENSHOT_HEIGHT=str(844 if mobile else height),AUVEMIR_SCREENSHOT_DELAY_MS="850")
     if page is not None: current["AUVEMIR_SCREENSHOT_PAGE"]=str(page)
     if mobile: current["AUVEMIR_MOBILE"]="1"
     if settings is not None: current["AUVEMIR_SCREENSHOT_SETTINGS"]=str(settings)
@@ -30,12 +30,31 @@ def main():
         capture(binary,env,folder/"import.png",argument=library)
         db=folder/"profile/auvemir.sqlite"
         with sqlite3.connect(db) as conn: assert conn.execute("SELECT count(*) FROM media").fetchone()[0]==12
+        sections=output/"sections";sections.mkdir(exist_ok=True)
         captures=[("desktop-home.png",0,False,None,False), ("desktop-library.png",1,False,None,False),("desktop-equalizer.png",11,False,0,False),("settings-appearance.png",11,False,1,False),("phone-home.png",0,True,None,False),("phone-library.png",1,True,None,False),("phone-player.png",1,True,None,True)]
         track=library/"Evening Current/01 - Drift.flac"
         for name,page,mobile,section,player in captures:
             capture(binary,env,output/name,page,mobile,section,player,argument=track if player else None)
-        with sqlite3.connect(db) as conn: conn.execute("INSERT INTO settings(key,value) VALUES('appearance-light','true') ON CONFLICT(key) DO UPDATE SET value='true'")
+        destinations=[("home",0),("library",1),("discover",2),("audiobooks",3),("podcasts",4),("radio",5),("ambient",6),("recordings",7),("queue",8),("search",9),("favorites",10)]
+        for name,page in destinations:
+            capture(binary,env,sections/f"section-{name}.png",page=page)
+        settings_names=["playback","appearance","files","servers","metadata","sync","integrations"]
+        for index,name in enumerate(settings_names):
+            capture(binary,env,sections/f"settings-{name}.png",page=11,settings=index)
+        theme_names=["amoled","ocean","forest","violet","white","cloud","rose","mint"]
+        for name in theme_names:
+            with sqlite3.connect(db) as conn:
+                conn.execute("INSERT INTO settings(key,value) VALUES('appearance-theme',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",(name,))
+                conn.execute("INSERT INTO settings(key,value) VALUES('appearance-light',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",("true" if name in theme_names[4:] else "false",))
+            capture(binary,env,sections/f"theme-{name}.png",page=1)
+        with sqlite3.connect(db) as conn:
+            conn.execute("UPDATE settings SET value='white' WHERE key='appearance-theme'")
+            conn.execute("UPDATE settings SET value='true' WHERE key='appearance-light'")
         capture(binary,env,output/"desktop-light.png",page=1)
+        capture(binary,env,sections/"section-library-light.png",page=1)
+        with sqlite3.connect(db) as conn:
+            conn.execute("UPDATE settings SET value='amoled' WHERE key='appearance-theme'")
+            conn.execute("UPDATE settings SET value='false' WHERE key='appearance-light'")
         if not args.without_motion:
             with sqlite3.connect(db) as conn: conn.execute("UPDATE settings SET value='false' WHERE key='appearance-light'")
             frames=folder/"frames";motion=profile_environment(session,folder/"profile",reduced=False)
@@ -63,12 +82,12 @@ def main():
                 assert gif.n_frames >= 50
             animation.replace(output/"navigation.gif")
         # Remove owned intermediate encodings before publishing the gallery manifest.
-        for leftover in output.glob("*.optimized.png"): leftover.unlink(missing_ok=True)
+        for leftover in output.rglob("*.optimized.png"): leftover.unlink(missing_ok=True)
         for leftover in output.glob("*.partial.gif"): leftover.unlink(missing_ok=True)
-        for asset in output.iterdir():
+        for asset in output.rglob("*"):
             if asset.suffix in (".png", ".gif"):
                 with Image.open(asset) as decoded:
                     for index in range(getattr(decoded, "n_frames", 1)): decoded.seek(index);decoded.load()
-        manifest={"source_sha256":source_digest(),"binary_sha256":hashlib.sha256(binary.read_bytes()).hexdigest(),"version":subprocess.check_output([str(binary),"--version"],text=True).strip(),"renderer":"Actual Slint 1.18.1 winit software renderer on Linux/Xvfb", "fixture":"12 generated 45-second quiet sine tones and procedural covers; no commercial media", "limitations":"Phone layout rendered on Linux, not physical-device certification. Playback uses a null ALSA sink, not a physical audio measurement. The GIF is a recording, not an FPS benchmark.","files":{p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(output.iterdir()) if p.suffix in (".png",".gif")}}
+        manifest={"source_sha256":source_digest(),"binary_sha256":hashlib.sha256(binary.read_bytes()).hexdigest(),"version":subprocess.check_output([str(binary),"--version"],text=True).strip(),"renderer":"Actual Slint 1.18.1 winit software renderer on Linux/Xvfb", "fixture":"12 generated 45-second quiet sine tones and procedural covers; no commercial media", "limitations":"Phone layout rendered on Linux, not physical-device certification. Playback uses a null ALSA sink, not a physical audio measurement. The GIF is a recording, not an FPS benchmark.","files":{p.relative_to(output).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(output.rglob("*")) if p.suffix in (".png",".gif")}}
         (output/"manifest.json").write_text(json.dumps(manifest,indent=2)+"\n");print(json.dumps(manifest,indent=2))
 if __name__=="__main__":main()

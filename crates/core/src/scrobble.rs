@@ -73,7 +73,7 @@ async fn submit_kind(
         .timeout(std::time::Duration::from_secs(20))
         .redirect(reqwest::redirect::Policy::none())
         .build()?;
-    let mut payload = serde_json::json!({"track_metadata":{"artist_name":listen.artist,"track_name":listen.title,"release_name":listen.album,"additional_info":{"duration_ms":listen.duration_ms,"media_player":"Auvemir","submission_client":"Auvemir","submission_client_version":"0.1.0"}}});
+    let mut payload = serde_json::json!({"track_metadata":{"artist_name":listen.artist,"track_name":listen.title,"release_name":listen.album,"additional_info":{"duration_ms":listen.duration_ms,"media_player":"Auvemir","submission_client":"Auvemir","submission_client_version":env!("CARGO_PKG_VERSION")}}});
     if !playing {
         payload["listened_at"] = listen.started_at.into();
     }

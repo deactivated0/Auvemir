@@ -9,7 +9,7 @@ cp LICENSE README.md THIRD_PARTY_NOTICES.md dist/Auvemir.app/Contents/Resources/
 python3 - "$auvemir_version" <<'PY'
 from pathlib import Path
 import plistlib, sys
-data={"CFBundleExecutable":"auvemir","CFBundleIdentifier":"org.auvemir.Auvemir","CFBundleName":"Auvemir","CFBundleDisplayName":"Auvemir","CFBundlePackageType":"APPL","CFBundleShortVersionString":sys.argv[1],"CFBundleVersion":"1","LSMinimumSystemVersion":"13.0","NSMicrophoneUsageDescription":"Auvemir records voice only when you choose Record voice.","NSHighResolutionCapable":True,"CFBundleIconFile":"Auvemir"}
+data={"CFBundleExecutable":"auvemir","CFBundleIdentifier":"org.auvemir.Auvemir","CFBundleName":"Auvemir","CFBundleDisplayName":"Auvemir","CFBundlePackageType":"APPL","CFBundleShortVersionString":sys.argv[1],"CFBundleVersion":sys.argv[1],"LSMinimumSystemVersion":"13.0","NSMicrophoneUsageDescription":"Auvemir records voice only when you choose Record voice.","NSHighResolutionCapable":True,"CFBundleIconFile":"Auvemir"}
 Path('dist/Auvemir.app/Contents/Info.plist').write_bytes(plistlib.dumps(data))
 PY
 auvemir_icons="$(mktemp -d)/Auvemir.iconset"

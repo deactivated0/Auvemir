@@ -7,8 +7,10 @@ import platform
 import subprocess
 import sys
 import tarfile
+import tomllib
 import tempfile
 ROOT=Path(__file__).resolve().parents[1]
+VERSION=tomllib.loads((ROOT/'Cargo.toml').read_text())['workspace']['package']['version']
 sys.path.insert(0,str(ROOT/'packaging'))
 from source_identity import source_digest
 sys.path.insert(0,str(ROOT/'tools'))
@@ -21,7 +23,7 @@ def digest(path):
 def main():
     arch=platform.machine();deb={'x86_64':'amd64','aarch64':'arm64'}[arch]
     dist=ROOT/'dist';expected=digest(ROOT/'target/release/auvemir');checks=[]
-    packages=[('portable',f'auvemir-0.1.0-linux-{arch}.tar.gz'),('deb',f'auvemir_0.1.0_{deb}.deb'),('arch',f'auvemir-0.1.0-1-{arch}.pkg.tar.zst'),('rpm',f'auvemir-0.1.0-1.{arch}.rpm')]
+    packages=[('portable',f'auvemir-{VERSION}-linux-{arch}.tar.gz'),('deb',f'auvemir_{VERSION}_{deb}.deb'),('arch',f'auvemir-{VERSION}-1-{arch}.pkg.tar.zst'),('rpm',f'auvemir-{VERSION}-1.{arch}.rpm')]
     with tempfile.TemporaryDirectory(prefix='auvemir-package-check-') as directory:
         work=Path(directory)
         for kind,name in packages:
@@ -42,7 +44,7 @@ def main():
             if len(binaries)!=1 or digest(binaries[0])!=expected:raise RuntimeError('Packaged ELF differs from the release: '+name)
             if not list(output.rglob('THIRD_PARTY_NOTICES.md')):raise RuntimeError('Missing third-party notices: '+name)
             checks.append({'package':name,'container_valid':True,'binary_matches_release':True,'notice_present':True})
-        app=dist/f'Auvemir-0.1.0-{arch}.AppImage';output=work/'appimage';output.mkdir()
+        app=dist/f'Auvemir-{VERSION}-{arch}.AppImage';output=work/'appimage';output.mkdir()
         subprocess.run([str(app),'--appimage-extract'],cwd=output,check=True,stdout=subprocess.DEVNULL)
         if digest(output/'squashfs-root/usr/bin/auvemir')!=expected:raise RuntimeError('AppImage ELF differs from the release')
         fixture=work/'tone.wav';subprocess.run(['ffmpeg','-loglevel','error','-f','lavfi','-i','sine=frequency=440:duration=1','-y',str(fixture)],check=True)

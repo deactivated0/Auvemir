@@ -109,6 +109,8 @@ jobs:
         with:
           path: artifacts
           merge-multiple: true
+      - name: Bundle section screenshots
+        run: zip -qr "artifacts/Auvemir-${GITHUB_REF_NAME#v}-screenshots.zip" docs/screenshots
       - name: Create reviewable draft release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -116,4 +118,4 @@ jobs:
           AUVEMIR_TAG: ${{ github.ref_name }}
         run: |
           find artifacts -type f ! -name SHA256SUMS -exec sha256sum {} \; > artifacts/SHA256SUMS
-          gh release create "$AUVEMIR_TAG" artifacts/* --draft --title "Auvemir $AUVEMIR_TAG" --notes "Desktop packages, Android development packages, unsigned iOS package and corresponding source. Device validation and Apple provisioning are separate requirements. See README and docs/PLATFORMS.md for validation status."
+          gh release create "$AUVEMIR_TAG" artifacts/* --draft --title "Auvemir ${AUVEMIR_TAG#v}" --notes-file CHANGELOG.md

@@ -56,11 +56,12 @@ jobs:
       - name: Native dependencies
         run: |
           brew install llvm cmake ffmpeg
+          brew install xtool-org/tap/xtool
           echo "LIBCLANG_PATH=$(brew --prefix llvm)/lib" >> "$GITHUB_ENV"
       - name: Rust toolchain
         run: rustup toolchain install 1.99.0 --profile minimal
       - name: Shared application and UIKit host
-        run: bash packaging/build_ios.sh
+        run: AUVEMIR_IOS_USE_XTOOL=1 bash packaging/build_ios.sh
       - name: Build and exercise iOS Simulator
         run: |
           bash packaging/build_ios.sh --simulator

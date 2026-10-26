@@ -7,10 +7,12 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import tomllib
 import zipfile
 from source_identity import source_digest
 
 ROOT = Path(__file__).resolve().parents[1]
+VERSION = tomllib.loads((ROOT / 'Cargo.toml').read_text())['workspace']['package']['version']
 RUNTIMES = ("libstdc++-6.dll", "libgcc_s_seh-1.dll", "libwinpthread-1.dll")
 
 def run(args, env=None, cwd=ROOT):
@@ -67,8 +69,8 @@ def main():
     if not args.makensis:
         raise RuntimeError('Install NSIS or provide --makensis to build the installer')
     prefix = '/' if os.name == 'nt' else '-'
-    run([args.makensis, prefix + 'DAPP_BINARY=' + str(binary), 'windows.nsi'], env, ROOT / 'packaging')
-    installer = ROOT / 'dist' / 'Auvemir-0.1.0-windows-x86_64-Setup.exe'
+    run([args.makensis, prefix + 'DAPP_BINARY=' + str(binary), prefix + 'DAPP_VERSION=' + VERSION, 'windows.nsi'], env, ROOT / 'packaging')
+    installer = ROOT / 'dist' / f'Auvemir-{VERSION}-windows-x86_64-Setup.exe'
     artifacts = []
     for path in [archive, installer]:
         with path.open('rb') as source:

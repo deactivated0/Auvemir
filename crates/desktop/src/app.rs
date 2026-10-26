@@ -25,6 +25,7 @@ slint::include_modules!();
 enum Command {
     Navigate(i32),
     Sort(i32),
+    Theme(i32),
     Preference(String, bool),
     SelectServer(i32),
     ViewResult(u64, Box<Command>),
@@ -106,6 +107,33 @@ enum Command {
     #[cfg(target_os = "android")]
     UiAttached,
     Shutdown,
+}
+
+fn theme_id(index: i32) -> &'static str {
+    match index {
+        1 => "ocean",
+        2 => "forest",
+        3 => "violet",
+        4 => "white",
+        5 => "cloud",
+        6 => "rose",
+        7 => "mint",
+        _ => "amoled",
+    }
+}
+
+fn theme_index(id: &str) -> Option<i32> {
+    match id {
+        "amoled" => Some(0),
+        "ocean" => Some(1),
+        "forest" => Some(2),
+        "violet" => Some(3),
+        "white" => Some(4),
+        "cloud" => Some(5),
+        "rose" => Some(6),
+        "mint" => Some(7),
+        _ => None,
+    }
 }
 
 #[cfg(target_os = "android")]
@@ -289,6 +317,7 @@ pub fn run() -> Result<()> {
     macro_rules! bind {($method:ident,$($arg:ident),* =>$command:expr)=>{{let tx=sender.clone();let w=weak.clone();ui.$method(move|$($arg),*|submit(&tx,$command,&w));}};}
     bind!(on_navigate,page=>Command::Navigate(page));
     bind!(on_sort_library,index=>Command::Sort(index));
+    bind!(on_select_theme,index=>Command::Theme(index));
     bind!(on_preference,key,value=>Command::Preference(key.to_string(),value));
     bind!(on_select_server,index=>Command::SelectServer(index));
     ui.on_quit(|| {
@@ -446,7 +475,7 @@ struct Worker {
     current: Option<Media>,
     page: i32,
     sort: MediaSort,
-    light: bool,
+    theme_index: i32,
     reduce_motion: bool,
     loading: bool,
     home_recent: bool,
@@ -874,7 +903,12 @@ impl Worker {
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(0),
         );
-        let light = db.setting("appearance-light")?.as_deref() == Some("true");
+        let legacy_light = db.setting("appearance-light")?.as_deref() == Some("true");
+        let theme_index = db
+            .setting("appearance-theme")?
+            .as_deref()
+            .and_then(theme_index)
+            .unwrap_or(if legacy_light { 4 } else { 0 });
         let reduce_motion = db.setting("motion-reduced")?.as_deref() == Some("true");
         Ok(Self {
             base,
@@ -887,7 +921,7 @@ impl Worker {
             current: None,
             page: 0,
             sort,
-            light,
+            theme_index,
             reduce_motion,
             loading: false,
             home_recent: false,
@@ -1211,9 +1245,10 @@ impl Worker {
                 self.offset = 0;
                 self.refresh()?;
             }
+            Command::Theme(index) => self.set_theme(index)?,
             Command::Preference(key, value) => {
                 match key.as_str() {
-                    "appearance-light" => self.light = value,
+                    "appearance-light" => self.set_theme(if value { 4 } else { 0 })?,
                     "motion-reduced" => self.reduce_motion = value,
                     _ => bail!("Unknown appearance preference"),
                 }
@@ -2730,6 +2765,15 @@ impl Worker {
         }
         Ok(())
     }
+
+    fn set_theme(&mut self, index: i32) -> Result<()> {
+        self.theme_index = index.clamp(0, 7);
+        self.db
+            .set("appearance-theme", theme_id(self.theme_index))?;
+        self.db
+            .set("appearance-light", &(self.theme_index >= 4).to_string())?;
+        Ok(())
+    }
     fn action(&mut self, a: &str) -> Result<()> {
         if a.starts_with("server:")
             || a.starts_with("radio-")
@@ -4123,7 +4167,7 @@ impl Worker {
             })
             .collect::<Vec<_>>();
         let sort = self.sort.index();
-        let light = self.light;
+        let theme_index = self.theme_index;
         let reduced_motion = self.reduce_motion || crate::motion::system_reduced();
         let force_reduce = self.reduce_motion;
         let loading = self.loading;
@@ -4170,7 +4214,7 @@ impl Worker {
             "Off"
         };
         self.ui.upgrade_in_event_loop(move |u| {
-            u.set_light_mode(light);
+            u.set_theme_index(theme_index);
             u.set_reduced_motion(reduced_motion);
             u.set_force_reduced_motion(force_reduce);
             u.set_sort_index(sort);
@@ -4802,7 +4846,7 @@ mod state_tests {
         drop(worker);
         let (tx, _rx) = mpsc::sync_channel(64);
         let worker = Worker::new(directory.0.clone(), tx, Default::default()).unwrap();
-        assert!(worker.light);
+        assert_eq!(worker.theme_index, 4);
         assert!(worker.reduce_motion);
         assert_eq!(worker.sort, MediaSort::Artist);
         assert!(worker.servers.is_empty());

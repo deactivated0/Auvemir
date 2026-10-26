@@ -8,8 +8,9 @@ A native **Rust and Slint audio player** for your local music library, personal 
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
 [![Rust 1.99](https://img.shields.io/badge/Rust-1.99-orange)](Cargo.toml)
 [![Slint 1.18.1](https://img.shields.io/badge/Slint-1.18.1-green)](crates/desktop/Cargo.toml)
+![Version 0.2.0](https://img.shields.io/badge/version-0.2.0-brightgreen)
 
-![Auvemir home with a personal library, soft green accents and persistent player controls](docs/screenshots/desktop-home.png)
+![Auvemir home with a personal library, an original matte vinyl play button, rounded controls and AMOLED black](docs/screenshots/desktop-home.png)
 
 **Development preview:** build and verification results are documented honestly. Source support for desktop, Android and iOS does not imply signing, receiver validation or physical-device certification. See [verification](docs/TRANSFORMATION.md), [platform status](docs/PLATFORMS.md) and [feature details](docs/FEATURES.md).
 
@@ -19,7 +20,7 @@ A native **Rust and Slint audio player** for your local music library, personal 
 
 - **Your collection comes first.** Incremental imports, album/artist/title/duration sorting, literal search, favorites, playlists and restored queues.
 - **One place for long listens.** Resume audiobooks and podcasts, create bookmarks, browse embedded MPEG-4 chapters and set a sleep timer.
-- **A quieter interface.** Responsive desktop and phone layouts, persistent light or dark appearance, grouped settings and restrained subtitle motion that respects reduced motion.
+- **An interface with room to breathe.** Responsive desktop and phone layouts, 44-pixel controls, eight persistent palettes, and restrained motion that respects reduced-motion settings.
 - **Connections are your choice.** Personal servers, public catalogs and opt-in metadata services. Credentials use native secure storage, with no plaintext fallback or telemetry.
 
 ## Inside the app
@@ -33,6 +34,8 @@ A native **Rust and Slint audio player** for your local music library, personal 
 | ![Responsive phone home layout](docs/screenshots/phone-home.png) | ![Expanded phone player with actual demo audio](docs/screenshots/phone-player.png) |
 
 These are real application captures using twelve generated demo tracks and procedural covers. Phone captures exercise the responsive Linux renderer; they do not certify mobile hardware. Reproduce them with the [capture guide](docs/CAPTURES.md).
+
+[Browse screenshots of every section, settings page, and color theme](docs/screenshots/SECTIONS.md).
 
 <details>
 <summary>See navigation and subtitle motion</summary>

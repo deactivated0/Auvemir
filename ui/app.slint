@@ -1,20 +1,37 @@
 import { LineEdit, ScrollView, ListView, TextEdit, Palette, ComboBox } from "std-widgets.slint";
 
 export global Design {
-    in-out property <bool> light: false;
+    in-out property <int> theme-index: 0;
     in-out property <bool> reduced: false;
-    out property <color> canvas: light ? #f4f5f2 : #0b1013;
-    out property <color> sidebar: light ? #e9ede8 : #0e1519;
-    out property <color> surface: light ? #ffffff : #121c21;
-    out property <color> raised: light ? #e6eee7 : #1b2a30;
-    out property <color> hover: light ? #dce9e0 : #20343b;
-    out property <color> border: light ? #d5dfd7 : #293940;
-    out property <color> text: light ? #1b302c : #edf3ed;
-    out property <color> muted: light ? #536962 : #a3b3b2;
-    out property <color> subtle: light ? #627a71 : #8ca4a3;
-    out property <color> accent: light ? #245f48 : #b4e4c8;
-    out property <color> accent-soft: light ? #d8ecde : #233d33;
-    out property <color> on-accent: light ? #ffffff : #10261b;
+    out property <bool> light: theme-index >= 4;
+    out property <color> canvas: theme-index == 0 ? #000000 : theme-index == 1 ? #071419 : theme-index == 2 ? #06110d : theme-index == 3 ? #100d17 : theme-index == 4 ? #ffffff : theme-index == 5 ? #f4f9ff : theme-index == 6 ? #fff7f7 : #f5fbf6;
+    out property <color> sidebar: theme-index == 0 ? #08090b : theme-index == 1 ? #0b1b22 : theme-index == 2 ? #0a1812 : theme-index == 3 ? #171321 : theme-index == 4 ? #f6f6f8 : theme-index == 5 ? #eef5fd : theme-index == 6 ? #fff0f1 : #edf7ef;
+    out property <color> surface: theme-index == 0 ? #111215 : theme-index == 1 ? #10232c : theme-index == 2 ? #102119 : theme-index == 3 ? #211b2d : #ffffff;
+    out property <color> raised: theme-index == 0 ? #1d1f23 : theme-index == 1 ? #18323d : theme-index == 2 ? #182e22 : theme-index == 3 ? #2b2339 : theme-index == 4 ? #f0f0f3 : theme-index == 5 ? #e6f0fb : theme-index == 6 ? #fce9ec : #e5f2e8;
+    out property <color> hover: theme-index == 0 ? #25282e : theme-index == 1 ? #1c3945 : theme-index == 2 ? #203a2b : theme-index == 3 ? #352b46 : theme-index == 4 ? #e8e8ee : theme-index == 5 ? #dceafe : theme-index == 6 ? #f8dde2 : #d9ecdf;
+    out property <color> border: theme-index == 0 ? #292b30 : theme-index == 1 ? #28444e : theme-index == 2 ? #2d4737 : theme-index == 3 ? #483b56 : theme-index == 4 ? #e5e5ea : theme-index == 5 ? #d0deed : theme-index == 6 ? #ead0d6 : #d2e5d8;
+    out property <color> text: theme-index == 0 ? #f5f5f7 : theme-index == 1 ? #ebf6f8 : theme-index == 2 ? #eff7ee : theme-index == 3 ? #f5f0fa : theme-index == 4 ? #1b1b1f : theme-index == 5 ? #172a3a : theme-index == 6 ? #35232a : #183429;
+    out property <color> muted: theme-index == 0 ? #a0a2a8 : theme-index == 1 ? #9db6bf : theme-index == 2 ? #a4baa8 : theme-index == 3 ? #b6afc0 : theme-index == 4 ? #5b5b63 : theme-index == 5 ? #526d86 : theme-index == 6 ? #775b63 : #557363;
+    out property <color> subtle: theme-index == 0 ? #787b83 : theme-index == 1 ? #7795a0 : theme-index == 2 ? #78927f : theme-index == 3 ? #9589a4 : theme-index == 4 ? #77777f : theme-index == 5 ? #6c85a0 : theme-index == 6 ? #937983 : #6e8976;
+    out property <color> accent: theme-index == 0 ? #63d4ac : theme-index == 1 ? #60d5e6 : theme-index == 2 ? #79dea4 : theme-index == 3 ? #c9a8f5 : theme-index == 4 ? #246b53 : theme-index == 5 ? #356fbe : theme-index == 6 ? #aa445e : #307356;
+    out property <color> accent-soft: theme-index == 0 ? #133327 : theme-index == 1 ? #15333a : theme-index == 2 ? #1a3927 : theme-index == 3 ? #352649 : theme-index == 4 ? #ddf1e7 : theme-index == 5 ? #dfebf9 : theme-index == 6 ? #f6e1e6 : #deefe3;
+    out property <color> on-accent: theme-index == 1 ? #06262a : theme-index == 2 ? #0a2a17 : theme-index == 3 ? #27113d : theme-index == 0 ? #09251a : #ffffff;
+}
+
+component ThemeChip inherits Rectangle {
+    in property <string> title;
+    in property <color> tint;
+    in property <bool> selected: false;
+    callback triggered();
+    min-width: 0px; height: 44px; horizontal-stretch: 1;
+    border-radius: 11px; border-width: selected || focus.has-focus || Design.light ? 1px : 0px;
+    border-color: selected ? Design.accent : Design.muted;
+    background: selected ? Design.accent-soft : touch.pressed ? Design.raised : touch.has-hover ? Design.hover : Design.surface;
+    accessible-role: button; accessible-label: root.title; accessible-action-default => {root.triggered();}
+    Rectangle { x: 11px; y: (parent.height - self.height)/2; width: 10px; height: 10px; border-radius: 5px; background: root.tint; }
+    Text { x: 29px; y: 0px; width: parent.width - 38px; height: parent.height; text: root.title; color: Design.text; font-size: 12px; vertical-alignment: center; overflow: elide; }
+    focus := FocusScope { key-pressed(event) => {if(event.text == "\n" || event.text == " "){root.triggered();return accept;}return reject;} }
+    touch := TouchArea { clicked => {focus.focus();root.triggered();} }
 }
 component ScreenHeading inherits Rectangle {
     in property <string> title;
@@ -93,19 +110,25 @@ component Action inherits Rectangle {
     forward-focus: focus;
     accessible-role: button; accessible-label: text == "▶" ? "Play" : text == "Ⅱ" ? "Pause" : text == "♥" ? "Remove from favorites" : text == "♡" ? "Add to favorites" : text == "⚙" ? "Settings" : text == "+" ? "Add to queue" : text == "Next" ? "Play next" : text == "|‹" ? "Previous track" : text == "›|" ? "Next track" : text == "↑" ? "Move up" : text == "↓" ? "Move down" : text == "×" ? "Remove from queue" : text;
     accessible-enabled: root.enabled; accessible-action-default => {if(root.enabled){root.triggered();}}
-    preferred-width: text == "▶" || text == "♥" || text == "♡" || text == "⚙" ? 36px : label.preferred-width + 24px;
-    min-width: 24px;
-    height: 34px; horizontal-stretch: 0; vertical-stretch: 0;
-    border-radius: 7px;
-    background: !root.enabled ? Design.sidebar : root.light ? Design.accent : root.selected ? Design.accent-soft : touch.pressed ? Design.raised : touch.has-hover ? Design.hover : Design.surface;
+    property <bool> icon-only: text == "▶" || text == "Ⅱ" || text == "♥" || text == "♡" || text == "⚙" || text == "|‹" || text == "›|" || text == "↑" || text == "↓" || text == "×" || text == "+";
+    property <image> icon-image: text == "▶" ? @image-url("icons/play-button.png") : text == "Ⅱ" ? @image-url("icons/pause.svg") : text == "♥" ? @image-url("icons/heart.svg") : text == "♡" ? @image-url("icons/heart-outline.svg") : text == "⚙" ? @image-url("icons/settings.svg") : text == "|‹" ? @image-url("icons/previous.svg") : text == "›|" ? @image-url("icons/next.svg") : text == "↑" ? @image-url("icons/move-up.svg") : text == "↓" ? @image-url("icons/move-down.svg") : text == "×" ? @image-url("icons/close.svg") : @image-url("icons/plus.svg");
+    preferred-width: icon-only ? 44px : label.preferred-width + 32px;
+    min-width: 44px;
+    height: 42px; horizontal-stretch: 0; vertical-stretch: 0;
+    border-radius: icon-only ? 21px : 11px;
+    background: !root.enabled ? Design.sidebar : root.light ? Design.accent : root.selected ? Design.accent-soft : touch.pressed ? Design.raised : touch.has-hover ? Design.hover : Design.light ? Design.raised : Design.surface;
     animate background { duration: Design.reduced ? 0ms : 130ms; }
     border-color: focus.has-focus ? Design.muted : Design.border;
-    border-width: focus.has-focus ? 1px : 0px;
-    label := Text { x: 0px; y: 0px; width: parent.width; height: parent.height; visible: root.text != "▶" && root.text != "♥" && root.text != "♡" && root.text != "⚙"; text: root.text; color: !root.enabled ? Design.subtle : root.light ? Design.on-accent : Design.text; font-size: 12px; horizontal-alignment: center; vertical-alignment: center; }
-    if root.text == "▶" || root.text == "♥" || root.text == "♡" || root.text == "⚙": Image {
-        width: 12px; height: 12px; x: (parent.width - self.width)/2; y: (parent.height - self.height)/2;
-        colorize: root.light ? Design.on-accent : Design.text;
-        source: root.text == "⚙" ? @image-url("icons/settings.svg") : root.text == "♥" ? @image-url("icons/heart.svg") : root.text == "♡" ? @image-url("icons/heart-outline.svg") : !root.enabled ? @image-url("icons/play-disabled.svg") : root.light ? @image-url("icons/play.svg") : @image-url("icons/play-light.svg");
+    border-width: focus.has-focus || (Design.light && !root.light) ? 1px : 0px;
+    label := Text { x: 0px; y: 0px; width: parent.width; height: parent.height; visible: !root.icon-only; text: root.text; color: !root.enabled ? Design.subtle : root.light ? Design.on-accent : Design.text; font-size: 13px; font-weight: 600; horizontal-alignment: center; vertical-alignment: center; }
+    if root.icon-only && root.text == "▶": Image {
+        width: 31px; height: 31px; x: (parent.width - self.width)/2; y: (parent.height - self.height)/2;
+        source: root.icon-image;
+    }
+    if root.icon-only && root.text != "▶": Image {
+        width: root.text == "▶" ? 31px : 20px; height: root.text == "▶" ? 31px : 20px; x: (parent.width - self.width)/2; y: (parent.height - self.height)/2;
+        colorize: root.text == "▶" ? Design.on-accent : !root.enabled ? Design.subtle : root.light ? Design.on-accent : Design.text;
+        source: root.text == "▶" && !root.enabled ? @image-url("icons/play-disabled.svg") : root.icon-image;
     }
     focus := FocusScope { enabled: root.enabled; key-pressed(event) => { if (event.text == "\n" || event.text == " ") { root.triggered(); return accept; } return reject; } }
     touch := TouchArea { enabled: root.enabled; clicked => { focus.focus(); root.triggered(); } }
@@ -113,13 +136,14 @@ component Action inherits Rectangle {
 
 component NavItem inherits Rectangle {
     in property <string> text;
+    in property <image> icon;
     in property <bool> selected;
     callback triggered();
     accessible-role: button; accessible-label: text; accessible-action-default => {root.triggered();}
-    height: 40px; border-radius: 8px;
-    if root.selected: Rectangle { x: 0px; y: 12px; width: 3px; height: 16px; border-radius: 2px; background: Design.accent; }
+    height: 42px; border-radius: 11px;
     background: root.selected ? Design.accent-soft : focus.has-focus || touch.has-hover ? Design.hover : Design.canvas;
-    Text { x: 13px; y: 0px; width: parent.width - 26px; height: parent.height; text: root.text; overflow: elide; color: root.selected ? Design.accent : Design.muted; font-size: 13px; vertical-alignment: center; }
+    Image { x: 13px; y: 11px; width: 20px; height: 20px; source: root.icon; colorize: root.selected ? Design.accent : Design.muted; }
+    Text { x: 43px; y: 0px; width: parent.width - 55px; height: parent.height; text: root.text; overflow: elide; color: root.selected ? Design.accent : Design.muted; font-size: 13px; font-weight: root.selected ? 600 : 400; vertical-alignment: center; }
     focus := FocusScope { key-pressed(event) => { if(event.text == "\n" || event.text == " ") {root.triggered();return accept;}return reject;} }
     touch := TouchArea { clicked => {focus.focus();root.triggered();} }
 }
@@ -163,13 +187,13 @@ component QuickCard inherits Rectangle {
 }
 
 export component MainWindow inherits Window {
-    init => { Design.light = root.light-mode; Design.reduced = root.reduced-motion; Palette.color-scheme = root.light-mode ? ColorScheme.light : ColorScheme.dark; }
-    changed light-mode => { Design.light = root.light-mode; Palette.color-scheme = root.light-mode ? ColorScheme.light : ColorScheme.dark; }
+    init => { Design.theme-index = root.theme-index; Design.reduced = root.reduced-motion; Palette.color-scheme = root.theme-index >= 4 ? ColorScheme.light : ColorScheme.dark; }
+    changed theme-index => { Design.theme-index = root.theme-index; Palette.color-scheme = root.theme-index >= 4 ? ColorScheme.light : ColorScheme.dark; }
     changed reduced-motion => { Design.reduced = root.reduced-motion; }
     title: "Auvemir"; background: Design.canvas; default-font-size: 14px;
     icon: @image-url("../packaging/icons/auvemir.svg");
     preferred-width: 1180px; preferred-height: 780px; min-width: 320px; min-height: 540px;
-    in property <bool> light-mode: false;
+    in property <int> theme-index: 0;
     in property <bool> reduced-motion: false;
     in property <bool> force-reduced-motion: false;
     in property <bool> loading: false;
@@ -181,6 +205,7 @@ export component MainWindow inherits Window {
     in-out property <int> settings-section: 0;
     in-out property <bool> shortcut-help: false;
     callback sort-library(int);
+    callback select-theme(int);
     callback select-server(int);
     callback preference(string,bool);
     callback quit();
@@ -331,25 +356,25 @@ export component MainWindow inherits Window {
         min-width: 0px; min-height: 0px;
         spacing: 0px;
         if !root.mobile: Rectangle {
-            width: 212px; horizontal-stretch: 0; background: Design.canvas; border-width: 1px; border-color: Design.raised;
+            width: 212px; horizontal-stretch: 0; background: Design.sidebar; border-width: 1px; border-color: Design.raised;
             VerticalLayout {
                 padding: 12px; spacing: 4px;
                 HorizontalLayout { height: 48px; spacing: 9px; Text { text: "◉"; color: Design.text; font-size: 20px; width: 24px; } Text { text: "Auvemir"; color: Design.text; font-weight: 700; font-size: 16px; vertical-alignment: center; } }
-                NavItem { text: "⌂   Home"; selected: root.page == 0; triggered => {root.navigate(0);} }
-                NavItem { text: "▤   Library"; selected: root.page == 1; triggered => {root.navigate(1);} }
-                NavItem { text: "◎   Discover"; selected: root.page == 2; triggered => {root.navigate(2);} }
-                NavItem { text: "◉   Radio"; selected: root.page == 5; triggered => {root.navigate(5);} }
-                NavItem { text: "⌕   Search"; selected: root.page == 9; triggered => {root.navigate(9);} }
+                NavItem { text: "Home"; icon: @image-url("icons/home.svg"); selected: root.page == 0; triggered => {root.navigate(0);} }
+                NavItem { text: "Library"; icon: @image-url("icons/library.svg"); selected: root.page == 1; triggered => {root.navigate(1);} }
+                NavItem { text: "Discover"; icon: @image-url("icons/discover.svg"); selected: root.page == 2; triggered => {root.navigate(2);} }
+                NavItem { text: "Radio"; icon: @image-url("icons/radio.svg"); selected: root.page == 5; triggered => {root.navigate(5);} }
+                NavItem { text: "Search"; icon: @image-url("icons/search.svg"); selected: root.page == 9; triggered => {root.navigate(9);} }
                 Text { text: "YOUR AUDIO"; color: Design.subtle; font-size: 10px; height: 32px; vertical-alignment: bottom; }
-                NavItem { text: "▤   Audiobooks"; selected: root.page == 3; triggered => {root.navigate(3);} }
-                NavItem { text: "◌   Podcasts"; selected: root.page == 4; triggered => {root.navigate(4);} }
-                NavItem { text: "≋   Ambient"; selected: root.page == 6; triggered => {root.navigate(6);} }
-                NavItem { text: "◍   Recordings"; selected: root.page == 7; triggered => {root.navigate(7);} }
+                NavItem { text: "Audiobooks"; icon: @image-url("icons/books.svg"); selected: root.page == 3; triggered => {root.navigate(3);} }
+                NavItem { text: "Podcasts"; icon: @image-url("icons/podcast.svg"); selected: root.page == 4; triggered => {root.navigate(4);} }
+                NavItem { text: "Ambient"; icon: @image-url("icons/waveform.svg"); selected: root.page == 6; triggered => {root.navigate(6);} }
+                NavItem { text: "Recordings"; icon: @image-url("icons/microphone.svg"); selected: root.page == 7; triggered => {root.navigate(7);} }
                 Text { text: "PLAYLISTS"; color: Design.subtle; font-size: 10px; height: 32px; vertical-alignment: bottom; }
-                NavItem { text: "♡   Favorites"; selected: root.page == 10; triggered => {root.navigate(10);} }
-                ScrollView { min-height: 0px; vertical-stretch: 1; VerticalLayout { spacing: 4px; for p in root.saved-playlists: NavItem { text: "≡   " + p.title; selected: false; triggered => {root.open-playlist(p.id);} } Rectangle {} } }
-                NavItem { text: "≡   Queue"; selected: root.page == 8; triggered => {root.navigate(8);} }
-                NavItem { text: "⚙   Settings"; selected: root.page == 11; triggered => {root.navigate(11);} }
+                NavItem { text: "Favorites"; icon: @image-url("icons/heart-outline.svg"); selected: root.page == 10; triggered => {root.navigate(10);} }
+                ScrollView { min-height: 0px; vertical-stretch: 1; VerticalLayout { spacing: 4px; for p in root.saved-playlists: NavItem { text: p.title; icon: @image-url("icons/queue.svg"); selected: false; triggered => {root.open-playlist(p.id);} } Rectangle {} } }
+                NavItem { text: "Queue"; icon: @image-url("icons/queue.svg"); selected: root.page == 8; triggered => {root.navigate(8);} }
+                NavItem { text: "Settings"; icon: @image-url("icons/settings.svg"); selected: root.page == 11; triggered => {root.navigate(11);} }
             }
         }
         VerticalLayout {
@@ -583,7 +608,7 @@ export component MainWindow inherits Window {
                         if root.settings-section == 6: VerticalLayout { spacing: 16px;
                         if !root.native-mobile: VerticalLayout {
                             Text { text: "Discord presence"; color: Design.text; font-size: 18px; font-weight: 700; }
-                            Text { text: "Share music playback with your local Discord client. Enter your Discord application ID to enable it."; color: Design.muted; wrap: word-wrap; }
+                            Text { text: "Uses your open Discord desktop app through local IPC. No Discord account token or bot token is needed."; color: Design.muted; wrap: word-wrap; }
                             LineEdit { text <=> root.discord-app-id; placeholder-text: "Discord application ID"; height: 36px; }
                             HorizontalLayout { Action { text: "Enable presence"; triggered => {root.configure-discord(root.discord-app-id);} } Action { text: "Disable"; triggered => {root.action("discord-disconnect");} } Rectangle {} }
                         }
@@ -597,11 +622,23 @@ export component MainWindow inherits Window {
                         if root.settings-section == 1: VerticalLayout {
                             spacing: 20px;
                             Text { text: "A space that feels like you"; color: Design.text; font-size: 20px; font-weight: 600; wrap: word-wrap; }
-                            Text { text: "Appearance"; color: Design.muted; }
-                            HorizontalLayout { spacing: 10px;
-                                Action { text: "Dark"; selected: !root.light-mode; triggered => {root.preference("appearance-light",false);} }
-                                Action { text: "Light"; selected: root.light-mode; triggered => {root.preference("appearance-light",true);} }
-                                Rectangle {}
+                            Text { text: "Dark themes"; color: Design.muted; font-size: 13px; font-weight: 600; }
+                            HorizontalLayout { spacing: 8px;
+                                ThemeChip { title: "AMOLED black"; tint: #63d4ac; selected: root.theme-index == 0; triggered => {root.select-theme(0);} }
+                                ThemeChip { title: "Deep ocean"; tint: #60d5e6; selected: root.theme-index == 1; triggered => {root.select-theme(1);} }
+                            }
+                            HorizontalLayout { spacing: 8px;
+                                ThemeChip { title: "Forest"; tint: #79dea4; selected: root.theme-index == 2; triggered => {root.select-theme(2);} }
+                                ThemeChip { title: "Violet dusk"; tint: #c9a8f5; selected: root.theme-index == 3; triggered => {root.select-theme(3);} }
+                            }
+                            Text { text: "Light themes"; color: Design.muted; font-size: 13px; font-weight: 600; }
+                            HorizontalLayout { spacing: 8px;
+                                ThemeChip { title: "Plain white"; tint: #171719; selected: root.theme-index == 4; triggered => {root.select-theme(4);} }
+                                ThemeChip { title: "Cloud"; tint: #3972c4; selected: root.theme-index == 5; triggered => {root.select-theme(5);} }
+                            }
+                            HorizontalLayout { spacing: 8px;
+                                ThemeChip { title: "Rose"; tint: #ba5069; selected: root.theme-index == 6; triggered => {root.select-theme(6);} }
+                                ThemeChip { title: "Mint"; tint: #348360; selected: root.theme-index == 7; triggered => {root.select-theme(7);} }
                             }
                             Text { text: "Motion"; color: Design.muted; }
                             HorizontalLayout { spacing: 10px;
@@ -614,7 +651,7 @@ export component MainWindow inherits Window {
                         }
                         Text { text: "Offline by default"; color: Design.text; font-size: 18px; font-weight: 700; }
                         Text { text: "No telemetry. Connections are optional. Enabled scrobblers send listening metadata and retry offline listens; secrets use your operating system's secure storage."; color: Design.muted; wrap: word-wrap; }
-                        Text { text: "Auvemir 0.1 · GPL-3.0"; color: Design.subtle; }
+                        Text { text: "Auvemir 0.2.0 · GPL-3.0"; color: Design.subtle; }
                     }
                     if root.collections.length > 0: VerticalLayout {
                         spacing: 8px;
