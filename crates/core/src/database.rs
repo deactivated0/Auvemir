@@ -1,4 +1,4 @@
-use crate::model::{Bookmark, Media, MediaKind, Station};
+use crate::model::{Bookmark, Media, MediaKind, MediaSort, Station};
 use anyhow::{Result, bail};
 use rusqlite::{Connection, OptionalExtension, params};
 use std::{collections::HashSet, path::Path, time::Duration};
@@ -45,23 +45,38 @@ impl Store {
     }
     pub fn upsert(&mut self, items: &[Media]) -> Result<()> {
         let tx = self.conn.transaction()?;
+        Self::write_media(&tx, items)?;
+        tx.commit()?;
+        Ok(())
+    }
+    fn write_media(conn: &Connection, items: &[Media]) -> Result<()> {
+        let mut q = conn.prepare_cached("INSERT INTO media(id,kind,title,artist,album,location,duration_ms,artwork,favorite,provider,group_id,track_number) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12) ON CONFLICT(id) DO UPDATE SET title=excluded.title,artist=excluded.artist,album=excluded.album,location=excluded.location,duration_ms=excluded.duration_ms,artwork=excluded.artwork,group_id=excluded.group_id,track_number=excluded.track_number")?;
+        for m in items {
+            q.execute(params![
+                m.id,
+                m.kind.as_str(),
+                m.title,
+                m.artist,
+                m.album,
+                m.location,
+                sql_int(m.duration_ms)?,
+                m.artwork,
+                m.favorite,
+                m.provider,
+                m.group_id,
+                m.track_number
+            ])?;
+        }
+        Ok(())
+    }
+    /// Metadata and scan fingerprints must commit together so failed batches are retried.
+    pub fn save_scan(&mut self, scan: &crate::library::Scanned) -> Result<()> {
+        let tx = self.conn.transaction()?;
+        Self::write_media(&tx, &scan.items)?;
         {
-            let mut q = tx.prepare_cached("INSERT INTO media(id,kind,title,artist,album,location,duration_ms,artwork,favorite,provider,group_id,track_number) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12) ON CONFLICT(id) DO UPDATE SET title=excluded.title,artist=excluded.artist,album=excluded.album,location=excluded.location,duration_ms=excluded.duration_ms,artwork=excluded.artwork,group_id=excluded.group_id,track_number=excluded.track_number")?;
-            for m in items {
-                q.execute(params![
-                    m.id,
-                    m.kind.as_str(),
-                    m.title,
-                    m.artist,
-                    m.album,
-                    m.location,
-                    sql_int(m.duration_ms)?,
-                    m.artwork,
-                    m.favorite,
-                    m.provider,
-                    m.group_id,
-                    m.track_number
-                ])?;
+            let mut q = tx.prepare_cached("INSERT INTO files(path,size,modified) VALUES(?1,?2,?3) ON CONFLICT(path) DO UPDATE SET size=excluded.size,modified=excluded.modified")?;
+            for (path, size, modified) in &scan.fingerprints {
+                q.execute(params![path, sql_int(*size)?, sql_int(*modified)?])?;
             }
         }
         tx.commit()?;
@@ -74,6 +89,16 @@ impl Store {
         offset: usize,
         favorites: bool,
     ) -> Result<Vec<Media>> {
+        self.media_sorted(kind, search, offset, favorites, MediaSort::Album)
+    }
+    pub fn media_sorted(
+        &self,
+        kind: Option<MediaKind>,
+        search: &str,
+        offset: usize,
+        favorites: bool,
+        sort: MediaSort,
+    ) -> Result<Vec<Media>> {
         // Escaped LIKE patterns; all user values are parameters.
         let pattern = format!(
             "%{}%",
@@ -82,7 +107,11 @@ impl Store {
                 .replace('%', "\\%")
                 .replace('_', "\\_")
         );
-        let mut q = self.conn.prepare_cached("SELECT id,kind,title,artist,album,location,duration_ms,artwork,favorite,provider,group_id,track_number FROM media WHERE (?1 IS NULL OR kind=?1) AND (?2=0 OR favorite=1) AND (title LIKE ?3 ESCAPE '\\' OR artist LIKE ?3 ESCAPE '\\' OR album LIKE ?3 ESCAPE '\\') ORDER BY album COLLATE NOCASE,track_number,title COLLATE NOCASE LIMIT 100 OFFSET ?4")?;
+        let sql = format!(
+            "SELECT id,kind,title,artist,album,location,duration_ms,artwork,favorite,provider,group_id,track_number FROM media WHERE (?1 IS NULL OR kind=?1) AND (?2=0 OR favorite=1) AND (title LIKE ?3 ESCAPE '\\' OR artist LIKE ?3 ESCAPE '\\' OR album LIKE ?3 ESCAPE '\\') ORDER BY {} LIMIT 100 OFFSET ?4",
+            sort.order_by()
+        );
+        let mut q = self.conn.prepare_cached(&sql)?;
         Ok(q.query_map(
             params![
                 kind.map(|k| k.as_str()),

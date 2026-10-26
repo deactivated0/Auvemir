@@ -48,4 +48,8 @@ public final class AuvemirApplication extends Application {
         if(action.equals("save")){cipher.init(Cipher.ENCRYPT_MODE,key);cipher.updateAAD(id.getBytes(StandardCharsets.UTF_8));byte[] iv=cipher.getIV(),encrypted=cipher.doFinal(secret.getBytes(StandardCharsets.UTF_8));byte[] data=new byte[iv.length+encrypted.length];System.arraycopy(iv,0,data,0,iv.length);System.arraycopy(encrypted,0,data,iv.length,encrypted.length);if(!prefs.edit().putString(id,Base64.encodeToString(data,Base64.NO_WRAP)).commit())throw new IOException("Cannot save credential");return "";}
         if(!action.equals("load"))throw new IOException("Unknown credential action");String encoded=prefs.getString(id,null);if(encoded==null)throw new IOException("Reconnect this service");byte[] data=Base64.decode(encoded,Base64.NO_WRAP);if(data.length<28)throw new IOException("Invalid credential");cipher.init(Cipher.DECRYPT_MODE,key,new GCMParameterSpec(128,data,0,12));cipher.updateAAD(id.getBytes(StandardCharsets.UTF_8));return new String(cipher.doFinal(data,12,data.length-12),StandardCharsets.UTF_8);
     }
+    public boolean reducedMotion() {
+        try { return android.provider.Settings.Global.getFloat(getContentResolver(), android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f; }
+        catch (RuntimeException error) { return false; }
+    }
 }

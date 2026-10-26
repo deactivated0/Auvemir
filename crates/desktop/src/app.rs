@@ -6,7 +6,7 @@ use anyhow::{Context, Result, bail};
 use auvemir_core::{
     database::Store,
     downloads::Downloader,
-    model::{CatalogBook, Media, MediaKind, Station, format_time, stable_id},
+    model::{CatalogBook, Media, MediaKind, MediaSort, Station, format_time, stable_id},
     providers::Providers,
     queue::Queue,
 };
@@ -24,6 +24,11 @@ slint::include_modules!();
 
 enum Command {
     Navigate(i32),
+    Sort(i32),
+    Preference(String, bool),
+    SelectServer(i32),
+    ViewResult(u64, Box<Command>),
+    ScanFinished(u64, std::result::Result<(), String>),
     Play(String),
     Action(String),
     Import(String, i32),
@@ -63,7 +68,7 @@ enum Command {
     MediaControl(crate::controls::MediaControlEvent),
     Scrobbled(Vec<(i64, bool)>),
     ArtworkReady(String),
-    Scanned(auvemir_core::library::Scanned),
+    Scanned(u64, auvemir_core::library::Scanned),
     Catalog(Vec<CatalogBook>),
     Stations(Vec<Station>),
     Collections(Vec<(String, String, String)>),
@@ -233,6 +238,17 @@ pub fn run() -> Result<()> {
         } else {
             std::env::args().skip(1).collect()
         };
+    if args.first().is_some_and(|s| s == "--help" || s == "-h") {
+        println!(
+            "Auvemir {}\nNative audio player\n\nUsage: auvemir [FILE_OR_FOLDER]\n  --decode FILE       Check decoding\n  --play FILE         Play for up to 60 seconds\n  --fingerprint FILE  Print an AcoustID fingerprint\n  --version           Print version\n  --help              Show this help",
+            env!("CARGO_PKG_VERSION")
+        );
+        return Ok(());
+    }
+    if args.first().is_some_and(|s| s == "--version" || s == "-V") {
+        println!("Auvemir {}", env!("CARGO_PKG_VERSION"));
+        return Ok(());
+    }
     if args.first().is_some_and(|s| s == "--play") {
         return play_cli(Path::new(
             args.get(1).context("Usage: auvemir --play FILE")?,
@@ -255,6 +271,7 @@ pub fn run() -> Result<()> {
     #[cfg(not(target_os = "android"))]
     std::fs::create_dir_all(&base)?;
     let ui = MainWindow::new()?;
+    ui.set_reduced_motion(crate::motion::system_reduced());
     ui.set_native_mobile(cfg!(any(target_os = "android", target_os = "ios")));
     ui.set_native_airplay(cfg!(target_os = "ios"));
     #[cfg(not(target_os = "android"))]
@@ -266,6 +283,12 @@ pub fn run() -> Result<()> {
     let weak = ui.as_weak();
     macro_rules! bind {($method:ident,$($arg:ident),* =>$command:expr)=>{{let tx=sender.clone();let w=weak.clone();ui.$method(move|$($arg),*|submit(&tx,$command,&w));}};}
     bind!(on_navigate,page=>Command::Navigate(page));
+    bind!(on_sort_library,index=>Command::Sort(index));
+    bind!(on_preference,key,value=>Command::Preference(key.to_string(),value));
+    bind!(on_select_server,index=>Command::SelectServer(index));
+    ui.on_quit(|| {
+        let _ = slint::quit_event_loop();
+    });
     bind!(on_play_track,id=>Command::Play(id.to_string()));
     bind!(on_action,a=>Command::Action(a.to_string()));
     bind!(on_import_audio,path,page=>Command::Import(path.to_string(),page));
@@ -346,39 +369,17 @@ pub fn run() -> Result<()> {
         {
             let _ = sender.send(Command::Navigate(page));
         }
+        if let Ok(section) = std::env::var("AUVEMIR_SCREENSHOT_SETTINGS")
+            .unwrap_or_default()
+            .parse::<i32>()
+        {
+            ui.set_settings_section(section);
+        }
         if std::env::var("AUVEMIR_SCREENSHOT_PLAYER").is_ok() {
             ui.set_player_expanded(true);
         }
     }
-    // UI smoke-test mode uses the real Slint renderer; no mock UI or library.
-    let screenshot_timer = slint::Timer::default();
-    if let Ok(path) = std::env::var("AUVEMIR_SCREENSHOT") {
-        if std::env::var("AUVEMIR_MOBILE").is_ok() {
-            ui.window().set_size(slint::LogicalSize::new(390., 844.));
-        }
-        let w = weak.clone();
-        screenshot_timer.start(
-            slint::TimerMode::SingleShot,
-            Duration::from_secs(2),
-            move || {
-                if let Some(u) = w.upgrade() {
-                    match u.window().take_snapshot() {
-                        Ok(p) => {
-                            let _ = image::save_buffer(
-                                &path,
-                                p.as_bytes(),
-                                p.width(),
-                                p.height(),
-                                image::ColorType::Rgba8,
-                            );
-                        }
-                        Err(e) => eprintln!("Snapshot failed: {e}"),
-                    };
-                }
-                let _ = slint::quit_event_loop();
-            },
-        );
-    }
+    let capture = crate::capture::Capture::start(&ui);
     ui.run()?;
     #[cfg(not(target_os = "android"))]
     {
@@ -392,6 +393,7 @@ pub fn run() -> Result<()> {
             .join()
             .map_err(|_| anyhow::anyhow!("State worker failed"))?;
     }
+    capture.finish()?;
     Ok(())
 }
 
@@ -438,6 +440,16 @@ struct Worker {
     queue: Queue,
     current: Option<Media>,
     page: i32,
+    sort: MediaSort,
+    light: bool,
+    reduce_motion: bool,
+    loading: bool,
+    home_recent: bool,
+    view_generation: u64,
+    scan_generation: u64,
+    scanning: bool,
+    scan_imported: usize,
+    scan_errors: usize,
     offset: usize,
     query: String,
     remote_has_more: bool,
@@ -804,11 +816,12 @@ impl Worker {
             .collect();
         let mut queue = Queue::default();
         queue.replace(items, cursor);
-        let mut servers: Vec<auvemir_core::servers::Server> = db
-            .setting("servers")?
+        let saved_servers = db.setting("servers")?;
+        let mut servers: Vec<auvemir_core::servers::Server> = saved_servers
+            .clone()
             .and_then(|v| serde_json::from_str(&v).ok())
             .unwrap_or_default();
-        if !servers.iter().any(|s| s.protocol == "invidious") {
+        if saved_servers.is_none() {
             servers.push(auvemir_core::servers::Server {
                 id: "ytmusic".into(),
                 name: "YouTube Music".into(),
@@ -821,9 +834,15 @@ impl Worker {
             .setting("scrobblers")?
             .and_then(|v| serde_json::from_str(&v).ok())
             .unwrap_or_default();
-        let active_server = db.setting("active-server")?.or_else(|| {
-            servers.iter().find(|s| s.protocol == "invidious").map(|s| s.id.clone())
-        });
+        let active_server = db
+            .setting("active-server")?
+            .filter(|id| servers.iter().any(|s| &s.id == id))
+            .or_else(|| {
+                servers
+                    .iter()
+                    .find(|s| s.protocol == "invidious")
+                    .map(|s| s.id.clone())
+            });
         if let Some(gains) = db
             .setting("equalizer")?
             .and_then(|v| serde_json::from_str::<Vec<f32>>(&v).ok())
@@ -845,6 +864,13 @@ impl Worker {
             .setting("lyrics-offset")?
             .and_then(|v| v.parse().ok())
             .unwrap_or(0);
+        let sort = MediaSort::from_index(
+            db.setting("library-sort")?
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(0),
+        );
+        let light = db.setting("appearance-light")?.as_deref() == Some("true");
+        let reduce_motion = db.setting("motion-reduced")?.as_deref() == Some("true");
         Ok(Self {
             base,
             db,
@@ -855,6 +881,16 @@ impl Worker {
             queue,
             current: None,
             page: 0,
+            sort,
+            light,
+            reduce_motion,
+            loading: false,
+            home_recent: false,
+            view_generation: 0,
+            scan_generation: 0,
+            scanning: false,
+            scan_imported: 0,
+            scan_errors: 0,
             offset: 0,
             query: String::new(),
             remote_has_more: false,
@@ -1043,6 +1079,7 @@ impl Worker {
         self.view_dirty = true;
         self.collections.clear();
         self.status = format!("Loading results from {}…", server.name);
+        self.loading = true;
         self.job(async move {
             let result = server
                 .search_directory_page(&secret, &query, offset, path.as_deref())
@@ -1068,7 +1105,32 @@ impl Worker {
             .await;
         });
     }
+    fn view_job<F>(&mut self, future: F)
+    where
+        F: std::future::Future<Output = Result<Command>> + Send + 'static,
+    {
+        self.loading = true;
+        let generation = self.view_generation;
+        self.job(async move {
+            let result = future
+                .await
+                .unwrap_or_else(|e| Command::Notice(e.to_string()));
+            Ok(Command::ViewResult(generation, Box::new(result)))
+        });
+    }
     fn handle(&mut self, cmd: Command) -> Result<()> {
+        if matches!(
+            &cmd,
+            Command::Navigate(_)
+                | Command::Search(_, _)
+                | Command::Collection(_)
+                | Command::OpenPlaylist(_)
+                | Command::Subscribe(_, _)
+                | Command::Import(_, _)
+        ) {
+            self.view_generation = self.view_generation.wrapping_add(1);
+            self.loading = false;
+        }
         {
             let local_transport = match &cmd {
                 Command::Play(_)
@@ -1124,6 +1186,56 @@ impl Worker {
             self.leave_room();
         }
         match cmd {
+            Command::ViewResult(generation, result) => {
+                if generation != self.view_generation {
+                    // A completed subscription remains useful, without navigating away.
+                    if let Command::Feed(url, title, kind, items) = *result {
+                        self.db.upsert(&items)?;
+                        self.db.subscription(&url, &title, kind)?;
+                    }
+                    return Ok(());
+                }
+                self.loading = false;
+                return self.handle(*result);
+            }
+            Command::Sort(index) => {
+                self.sort = MediaSort::from_index(index);
+                self.db
+                    .set("library-sort", &self.sort.index().to_string())?;
+                self.offset = 0;
+                self.refresh()?;
+            }
+            Command::Preference(key, value) => {
+                match key.as_str() {
+                    "appearance-light" => self.light = value,
+                    "motion-reduced" => self.reduce_motion = value,
+                    _ => bail!("Unknown appearance preference"),
+                }
+                self.db.set(&key, &value.to_string())?;
+            }
+            Command::SelectServer(index) => {
+                let id = self
+                    .servers
+                    .get(index.max(0) as usize)
+                    .context("Connection is no longer available")?
+                    .id
+                    .clone();
+                self.action(&format!("server:{id}"))?;
+            }
+            Command::ScanFinished(generation, result) => {
+                if generation != self.scan_generation {
+                    return Ok(());
+                }
+                self.scanning = false;
+                self.status = match result {
+                    Ok(()) => format!(
+                        "Import complete. {} new or updated files; {} warnings.",
+                        self.scan_imported, self.scan_errors
+                    ),
+                    Err(error) => format!("Import stopped: {error}. Completed batches were saved."),
+                };
+            }
+
             Command::AmbientPreset(action, name) => {
                 match action.as_str() {
                     "save" => {
@@ -1223,6 +1335,12 @@ impl Worker {
                 self.remote_server_id = None;
                 self.remote_path = None;
                 self.allow_remote_art = true;
+                self.ui.upgrade_in_event_loop(move |u| {
+                    u.set_search_query("".into());
+                    if p == 3 {
+                        u.set_audiobook_section(0);
+                    }
+                })?;
                 self.page = p;
                 self.offset = 0;
                 self.query.clear();
@@ -1230,21 +1348,27 @@ impl Worker {
                 self.playlist_filter = None;
                 self.refresh()?;
                 if p == 2 {
-                    let _ = self.search_server_page(0, None, None);
+                    self.search_server_page(0, None, None)?;
                 } else if p == 5 {
                     if let Ok(providers) = self.providers() {
                         self.status = "Loading popular radio stations…".into();
-                        self.job(async move { Ok(Command::Stations(providers.radio("").await?)) });
+                        self.view_job(
+                            async move { Ok(Command::Stations(providers.radio("").await?)) },
+                        );
                     }
                 } else if p == 3 {
                     if let Ok(providers) = self.providers() {
                         self.status = "Loading LibriVox audiobooks…".into();
-                        self.job(async move { Ok(Command::Catalog(providers.books("").await?)) });
+                        self.view_job(
+                            async move { Ok(Command::Catalog(providers.books("").await?)) },
+                        );
                     }
                 } else if p == 4 {
                     if let Ok(providers) = self.providers() {
                         self.status = "Loading popular podcasts…".into();
-                        self.job(async move { Ok(Command::Catalog(providers.podcasts("").await?)) });
+                        self.view_job(async move {
+                            Ok(Command::Catalog(providers.podcasts("").await?))
+                        });
                     }
                 }
             }
@@ -1360,10 +1484,15 @@ impl Worker {
             }
             Command::Import(path, page) => {
                 if path.trim().is_empty() {
-                    bail!("Enter a file or folder path");
+                    return self.action("pick-files");
                 }
                 self.scan_cancel.store(true, Ordering::Relaxed);
                 self.scan_cancel = Arc::new(AtomicBool::new(false));
+                self.scan_generation = self.scan_generation.wrapping_add(1);
+                let scan_generation = self.scan_generation;
+                self.scanning = true;
+                self.scan_imported = 0;
+                self.scan_errors = 0;
                 let cancel = self.scan_cancel.clone();
                 let kind = kind_for_page(page).unwrap_or(MediaKind::LocalMusic);
                 let known = if kind == MediaKind::LocalMusic {
@@ -1382,7 +1511,7 @@ impl Worker {
                 let tx = self.tx.clone();
                 let artwork = self.base.join("artwork");
                 self.job(async move {
-                    tokio::task::spawn_blocking(move || {
+                    let result = tokio::task::spawn_blocking(move || {
                         auvemir_core::library::scan_batched(
                             &path,
                             kind,
@@ -1390,13 +1519,15 @@ impl Worker {
                             cancel,
                             Some(&artwork),
                             |batch| {
-                                tx.send(Command::Scanned(batch))
+                                tx.send(Command::Scanned(scan_generation, batch))
                                     .map_err(|_| anyhow::anyhow!("Library worker stopped"))
                             },
                         )
                     })
-                    .await??;
-                    Ok(Command::Notice("Library scan completed.".into()))
+                    .await
+                    .map_err(|e| e.to_string())
+                    .and_then(|r| r.map_err(|e| e.to_string()));
+                    Ok(Command::ScanFinished(scan_generation, result))
                 });
             }
             Command::OpenFile(path) => {
@@ -1408,16 +1539,22 @@ impl Worker {
                 self.queue.replace(vec![m], 0);
                 self.begin_play(Some(0))?;
             }
-            Command::Scanned(scan) => {
-                self.rooms.missing = None;
-                let n = scan.items.len();
-                self.db.upsert(&scan.items)?;
-                for (p, size, mtime) in scan.fingerprints {
-                    self.db.fingerprint(&p, size, mtime)?;
+            Command::Scanned(generation, scan) => {
+                if generation != self.scan_generation || !self.scanning {
+                    return Ok(());
                 }
+                if let Err(error) = self.db.save_scan(&scan) {
+                    self.scan_cancel.store(true, Ordering::Relaxed);
+                    self.scan_generation = self.scan_generation.wrapping_add(1);
+                    self.scanning = false;
+                    return Err(error);
+                }
+                self.rooms.missing = None;
+                self.scan_imported += scan.items.len();
+                self.scan_errors += scan.errors.len();
                 self.status = format!(
-                    "Imported {n} new or changed files. {} files could not be read.",
-                    scan.errors.len()
+                    "Importing… {} new or updated files; {} warnings.",
+                    self.scan_imported, self.scan_errors
                 );
                 self.refresh()?;
             }
@@ -1435,17 +1572,19 @@ impl Worker {
                     5 => {
                         let p = self.providers()?;
                         self.status = "Searching Radio Browser…".into();
-                        self.job(async move { Ok(Command::Stations(p.radio(&query).await?)) });
+                        self.view_job(async move { Ok(Command::Stations(p.radio(&query).await?)) });
                     }
                     4 => {
                         let p = self.providers()?;
                         self.status = "Searching podcasts…".into();
-                        self.job(async move { Ok(Command::Catalog(p.podcasts(&query).await?)) });
+                        self.view_job(
+                            async move { Ok(Command::Catalog(p.podcasts(&query).await?)) },
+                        );
                     }
                     3 => {
                         let p = self.providers()?;
                         self.status = "Searching LibriVox…".into();
-                        self.job(async move { Ok(Command::Catalog(p.books(&query).await?)) });
+                        self.view_job(async move { Ok(Command::Catalog(p.books(&query).await?)) });
                     }
                     _ => {
                         self.page = 9;
@@ -1454,6 +1593,7 @@ impl Worker {
                 }
             }
             Command::Catalog(books) => {
+                self.view.clear();
                 self.allow_remote_art = true;
                 self.books = books;
                 self.collections = self
@@ -1465,11 +1605,7 @@ impl Worker {
                         } else {
                             format!("{} · {} · LibriVox", b.author, b.language)
                         };
-                        (
-                            format!("book:{}", b.id),
-                            b.title.clone(),
-                            sub,
-                        )
+                        (format!("book:{}", b.id), b.title.clone(), sub)
                     })
                     .collect();
                 self.view_dirty = true;
@@ -1479,11 +1615,13 @@ impl Worker {
                 );
             }
             Command::Collections(cols) => {
+                self.view.clear();
                 self.collections = cols;
                 self.view_dirty = true;
                 self.status = format!("{} items. Select one to browse.", self.collections.len());
             }
             Command::Stations(stations) => {
+                self.collections.clear();
                 self.allow_remote_art = true;
                 for s in &stations {
                     self.db.save_station(s)?;
@@ -1521,7 +1659,7 @@ impl Worker {
                     };
                     let p = self.providers()?;
                     self.status = "Loading audio feed…".into();
-                    self.job(async move {
+                    self.view_job(async move {
                         let (title, items) = p.feed(&url, kind).await?;
                         Ok(Command::Feed(url, title, kind, items))
                     });
@@ -1549,11 +1687,15 @@ impl Worker {
                 self.page = 5;
                 self.query.clear();
                 self.refresh()?;
+                self.ui
+                    .upgrade_in_event_loop(|u| u.set_radio_editor(false))?;
                 self.status = "Station saved to your collection.".into();
             }
             Command::DeleteStation(id) => {
                 self.db.delete_station(&id)?;
                 self.refresh()?;
+                self.ui
+                    .upgrade_in_event_loop(|u| u.set_radio_editor(false))?;
                 self.status = "Custom station deleted.".into();
             }
             Command::EditStation(id) => {
@@ -1741,15 +1883,17 @@ impl Worker {
                     let p = self.providers()?;
                     self.status = format!("Loading radio stations for {country}…");
                     self.collections.clear();
-                    self.job(async move {
-                        Ok(Command::Stations(p.radio(&format!("country:{country}")).await?))
+                    self.view_job(async move {
+                        Ok(Command::Stations(
+                            p.radio(&format!("country:{country}")).await?,
+                        ))
                     });
                 } else if let Some(tag) = id.strip_prefix("radio-genre:") {
                     let tag = tag.to_string();
                     let p = self.providers()?;
                     self.status = format!("Loading radio stations for genre {tag}…");
                     self.collections.clear();
-                    self.job(async move {
+                    self.view_job(async move {
                         Ok(Command::Stations(p.radio(&format!("tag:{tag}")).await?))
                     });
                 } else if let Some(genre_id) = id.strip_prefix("book-genre:") {
@@ -1757,17 +1901,17 @@ impl Worker {
                     let p = self.providers()?;
                     self.status = "Loading audiobooks for genre…".into();
                     self.collections.clear();
-                    self.job(async move {
-                        Ok(Command::Catalog(p.books(&format!("genre:{genre_id}")).await?))
+                    self.view_job(async move {
+                        Ok(Command::Catalog(
+                            p.books(&format!("genre:{genre_id}")).await?,
+                        ))
                     });
                 } else if let Some(genre) = id.strip_prefix("podcast-genre:") {
                     let genre = genre.to_string();
                     let p = self.providers()?;
                     self.status = format!("Loading podcasts for {genre}…");
                     self.collections.clear();
-                    self.job(async move {
-                        Ok(Command::Catalog(p.podcasts(&genre).await?))
-                    });
+                    self.view_job(async move { Ok(Command::Catalog(p.podcasts(&genre).await?)) });
                 } else if let Some(id) = id.strip_prefix("book:") {
                     let b = self
                         .books
@@ -1782,7 +1926,7 @@ impl Worker {
                         MediaKind::Audiobook
                     };
                     self.status = format!("Loading {}…", b.title);
-                    self.job(async move {
+                    self.view_job(async move {
                         let (title, mut items) = p.feed(&b.feed_url, kind).await?;
                         for m in &mut items {
                             m.artist = b.author.clone();
@@ -1983,6 +2127,11 @@ impl Worker {
                     service.validate()?;
                     crate::credentials::save(&id, &secret)?;
                     self.services.retain(|s| s.id != id);
+                    if self.active_server.as_deref() == Some(id) {
+                        self.active_server = self.servers.first().map(|s| s.id.clone());
+                        self.db
+                            .set("active-server", self.active_server.as_deref().unwrap_or(""))?;
+                    }
                     self.services.push(service);
                     self.db
                         .set("scrobblers", &serde_json::to_string(&self.services)?)?;
@@ -1999,6 +2148,7 @@ impl Worker {
                 {
                     return Ok(());
                 }
+                self.loading = false;
                 let page = match result {
                     Ok(result) => result,
                     Err(error) => {
@@ -2580,6 +2730,33 @@ impl Worker {
         Ok(())
     }
     fn action(&mut self, a: &str) -> Result<()> {
+        if a.starts_with("server:")
+            || a.starts_with("radio-")
+            || a.starts_with("books-")
+            || a.starts_with("podcasts-")
+            || matches!(
+                a,
+                "subscriptions"
+                    | "online-trending"
+                    | "albums"
+                    | "artists"
+                    | "page-next"
+                    | "page-prev"
+            )
+        {
+            self.view_generation = self.view_generation.wrapping_add(1);
+            self.loading = false;
+        }
+        if a == "cancel-import" {
+            self.scan_cancel.store(true, Ordering::Relaxed);
+            self.scan_generation = self.scan_generation.wrapping_add(1);
+            self.scanning = false;
+            self.status = format!(
+                "Import canceled. {} completed files were saved.",
+                self.scan_imported
+            );
+            return Ok(());
+        }
         self.listen_tick();
         match a {
             "metadata-search" | "metadata-genius" | "metadata-recognize" => {
@@ -2788,7 +2965,8 @@ impl Worker {
                 let id = a.trim_start_matches("server:");
                 self.active_server = Some(id.into());
                 self.db.set("active-server", id)?;
-                self.status = "Music server selected.".into();
+                self.query.clear();
+                self.search_server_page(0, Some(id.into()), None)?;
             }
             a if a.starts_with("disconnect:") => {
                 let id = a.trim_start_matches("disconnect:");
@@ -2801,6 +2979,11 @@ impl Worker {
                 }
                 self.servers.retain(|s| s.id != id);
                 self.services.retain(|s| s.id != id);
+                if self.active_server.as_deref() == Some(id) {
+                    self.active_server = self.servers.first().map(|s| s.id.clone());
+                    self.db
+                        .set("active-server", self.active_server.as_deref().unwrap_or(""))?;
+                }
                 self.db.remove_scrobbles(id)?;
                 self.db
                     .set("servers", &serde_json::to_string(&self.servers)?)?;
@@ -2912,16 +3095,18 @@ impl Worker {
                 let p = self.providers()?;
                 self.status = "Loading popular radio stations…".into();
                 self.collections.clear();
-                self.job(async move { Ok(Command::Stations(p.radio("").await?)) });
+                self.view_job(async move { Ok(Command::Stations(p.radio("").await?)) });
             }
             "radio-countries" => {
                 let p = self.providers()?;
                 self.status = "Loading radio countries…".into();
-                self.job(async move {
+                self.view_job(async move {
                     let countries = p.radio_countries().await?;
                     let cols = countries
                         .into_iter()
-                        .map(|(c, count)| (format!("radio-country:{c}"), c, format!("{count} stations")))
+                        .map(|(c, count)| {
+                            (format!("radio-country:{c}"), c, format!("{count} stations"))
+                        })
                         .collect();
                     Ok(Command::Collections(cols))
                 });
@@ -2929,11 +3114,13 @@ impl Worker {
             "radio-genres" => {
                 let p = self.providers()?;
                 self.status = "Loading radio genres…".into();
-                self.job(async move {
+                self.view_job(async move {
                     let tags = p.radio_tags().await?;
                     let cols = tags
                         .into_iter()
-                        .map(|(t, count)| (format!("radio-genre:{t}"), t, format!("{count} stations")))
+                        .map(|(t, count)| {
+                            (format!("radio-genre:{t}"), t, format!("{count} stations"))
+                        })
                         .collect();
                     Ok(Command::Collections(cols))
                 });
@@ -2953,12 +3140,18 @@ impl Worker {
             "books-top" => {
                 let p = self.providers()?;
                 self.status = "Loading popular LibriVox audiobooks…".into();
-                self.job(async move { Ok(Command::Catalog(p.books("").await?)) });
+                self.view_job(async move { Ok(Command::Catalog(p.books("").await?)) });
             }
             "books-genres" => {
                 self.collections = auvemir_core::providers::book_genres()
                     .iter()
-                    .map(|(id, name)| (format!("book-genre:{id}"), (*name).to_string(), "LibriVox genre".to_string()))
+                    .map(|(id, name)| {
+                        (
+                            format!("book-genre:{id}"),
+                            (*name).to_string(),
+                            "LibriVox genre".to_string(),
+                        )
+                    })
                     .collect();
                 self.view.clear();
                 self.view_dirty = true;
@@ -2967,12 +3160,18 @@ impl Worker {
             "podcasts-top" => {
                 let p = self.providers()?;
                 self.status = "Loading popular podcasts…".into();
-                self.job(async move { Ok(Command::Catalog(p.podcasts("").await?)) });
+                self.view_job(async move { Ok(Command::Catalog(p.podcasts("").await?)) });
             }
             "podcasts-genres" => {
                 self.collections = auvemir_core::providers::podcast_genres()
                     .iter()
-                    .map(|name| (format!("podcast-genre:{name}"), (*name).to_string(), "Podcast genre".to_string()))
+                    .map(|name| {
+                        (
+                            format!("podcast-genre:{name}"),
+                            (*name).to_string(),
+                            "Podcast genre".to_string(),
+                        )
+                    })
                     .collect();
                 self.view.clear();
                 self.view_dirty = true;
@@ -3329,7 +3528,7 @@ impl Worker {
                 let p = self.providers()?;
                 for (url, _, kind) in self.db.subscriptions()? {
                     let p = p.clone();
-                    self.job(async move {
+                    self.view_job(async move {
                         let (title, items) = p.feed(&url, kind).await?;
                         Ok(Command::Feed(url, title, kind, items))
                     });
@@ -3736,15 +3935,23 @@ impl Worker {
         } else if let Some(id) = self.playlist_filter {
             self.db.playlist_items(id)?
         } else if self.page == 0 {
-            self.db.recent()?
+            let recent = self.db.recent()?;
+            self.home_recent = !recent.is_empty();
+            if self.home_recent {
+                recent
+            } else {
+                self.db
+                    .media_sorted(Some(MediaKind::LocalMusic), "", 0, false, self.sort)?
+            }
         } else if self.page == 11 {
             vec![]
         } else {
-            self.db.media(
+            self.db.media_sorted(
                 kind_for_page(self.page),
                 &self.query,
                 self.offset,
                 self.page == 10,
+                self.sort,
             )?
         };
         Ok(())
@@ -3914,6 +4121,23 @@ impl Worker {
                 subtitle: format!("{} layers", p.layers.len()).into(),
             })
             .collect::<Vec<_>>();
+        let sort = self.sort.index();
+        let light = self.light;
+        let reduced_motion = self.reduce_motion || crate::motion::system_reduced();
+        let force_reduce = self.reduce_motion;
+        let loading = self.loading;
+        let scanning = self.scanning;
+        let home_recent = self.home_recent;
+        let server_names = self
+            .servers
+            .iter()
+            .map(|s| slint::SharedString::from(s.name.as_str()))
+            .collect::<Vec<_>>();
+        let active_index = self
+            .servers
+            .iter()
+            .position(|s| Some(&s.id) == self.active_server.as_ref())
+            .unwrap_or(0) as i32;
         let status = self.status.clone();
         let count = self.db.count()? as i32;
         let page = self.page;
@@ -3941,6 +4165,15 @@ impl Worker {
             "Off"
         };
         self.ui.upgrade_in_event_loop(move |u| {
+            u.set_light_mode(light);
+            u.set_reduced_motion(reduced_motion);
+            u.set_force_reduced_motion(force_reduce);
+            u.set_sort_index(sort);
+            u.set_loading(loading);
+            u.set_scanning(scanning);
+            u.set_home_recent(home_recent);
+            u.set_server_names(ModelRc::new(VecModel::from(server_names)));
+            u.set_active_server_index(active_index);
             u.set_room_invitation(invitation.into());
             u.set_room_status(room_status.into());
             u.set_casting(casting);
@@ -4333,7 +4566,7 @@ impl Worker {
                 let p = self.providers()?;
                 for url in urls {
                     let p = p.clone();
-                    self.job(async move {
+                    self.view_job(async move {
                         let (title, items) = p.feed(&url, MediaKind::Podcast).await?;
                         Ok(Command::Feed(url, title, MediaKind::Podcast, items))
                     });
@@ -4402,15 +4635,12 @@ fn kind_for_page(page: i32) -> Option<MediaKind> {
 }
 fn headings(page: i32) -> (&'static str, &'static str) {
     match page {
-        1 => ("Local Music", "Your music, available offline."),
+        1 => ("Your library", "Your music, always close."),
         2 => (
-            "Online Music",
-            "Stream and search songs from YouTube Music.",
+            "Discover",
+            "Explore your personal servers and online catalogs.",
         ),
-        3 => (
-            "Audiobooks",
-            "Stories worth slowing down for. Local books and the free LibriVox catalog.",
-        ),
+        3 => ("Audiobooks", "Stories worth slowing down for."),
         4 => ("Podcasts", "Follow the voices you love."),
         5 => (
             "Radio",
@@ -4425,7 +4655,7 @@ fn headings(page: i32) -> (&'static str, &'static str) {
         9 => ("Search", "Find something in your library."),
         10 => ("Favorites", "The audio you come back to."),
         11 => ("Settings", "Make Auvemir yours."),
-        _ => ("Good Evening", "Music for a calmer mind."),
+        _ => ("Your listening room", "A little space for what moves you."),
     }
 }
 

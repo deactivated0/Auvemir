@@ -51,36 +51,58 @@ pub fn scan_batched(
         fingerprints: vec![],
         errors: vec![],
     };
-    let entries: Box<dyn Iterator<Item = PathBuf>> = if root.is_file() {
-        Box::new(std::iter::once(root))
+    let entries: Box<dyn Iterator<Item = Result<PathBuf, walkdir::Error>>> = if root.is_file() {
+        Box::new(std::iter::once(Ok(root)))
     } else {
         Box::new(
             walkdir::WalkDir::new(root)
                 .follow_links(false)
                 .into_iter()
-                .filter_map(|e| e.ok())
-                .filter(|e| e.file_type().is_file())
-                .map(|e| e.into_path()),
+                .filter(|e| e.as_ref().map_or(true, |e| e.file_type().is_file()))
+                .map(|e| e.map(|e| e.into_path())),
         )
     };
     for path in entries {
         if cancel.load(Ordering::Relaxed) {
             break;
         }
+        let path = match path {
+            Ok(path) => path,
+            Err(error) => {
+                if result.errors.len() < 50 {
+                    result.errors.push(error.to_string());
+                }
+                continue;
+            }
+        };
         if !audio_extension(&path) {
             continue;
         }
         // Reject non-UTF-8 paths instead of silently corrupting their persistent identity.
         let Some(location) = path.to_str().map(str::to_owned) else {
-            result.errors.push("Skipped a non-UTF-8 path".into());
+            if result.errors.len() < 50 {
+                result.errors.push("Skipped a non-UTF-8 path".into());
+            }
             continue;
         };
-        let meta = std::fs::metadata(&path)?;
-        let modified = meta
-            .modified()?
-            .duration_since(UNIX_EPOCH)?
-            .as_nanos()
-            .try_into()?;
+        let metadata = (|| -> Result<_> {
+            let meta = std::fs::metadata(&path)?;
+            let modified = meta
+                .modified()?
+                .duration_since(UNIX_EPOCH)?
+                .as_nanos()
+                .try_into()?;
+            Ok((meta, modified))
+        })();
+        let (meta, modified) = match metadata {
+            Ok(value) => value,
+            Err(error) => {
+                if result.errors.len() < 50 {
+                    result.errors.push(format!("{}: {error}", path.display()));
+                }
+                continue;
+            }
+        };
         if known.get(&location) == Some(&(meta.len(), modified)) {
             continue;
         }

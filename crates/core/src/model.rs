@@ -1,5 +1,43 @@
 use serde::{Deserialize, Serialize};
 
+/// Stable, whitelisted library ordering. Queue and playlist order are independent.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum MediaSort {
+    #[default]
+    Album,
+    Title,
+    Artist,
+    Duration,
+}
+impl MediaSort {
+    pub fn from_index(index: i32) -> Self {
+        match index {
+            1 => Self::Title,
+            2 => Self::Artist,
+            3 => Self::Duration,
+            _ => Self::Album,
+        }
+    }
+    pub fn index(self) -> i32 {
+        match self {
+            Self::Album => 0,
+            Self::Title => 1,
+            Self::Artist => 2,
+            Self::Duration => 3,
+        }
+    }
+    pub(crate) fn order_by(self) -> &'static str {
+        match self {
+            Self::Album => "album COLLATE NOCASE,track_number,title COLLATE NOCASE,id",
+            Self::Title => "title COLLATE NOCASE,artist COLLATE NOCASE,id",
+            Self::Artist => {
+                "artist COLLATE NOCASE,album COLLATE NOCASE,track_number,title COLLATE NOCASE,id"
+            }
+            Self::Duration => "duration_ms,title COLLATE NOCASE,id",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum MediaKind {

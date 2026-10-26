@@ -2,6 +2,18 @@
 
 A native Rust + Slint player for music, personal music servers, free audiobooks, podcasts, radio, ambient mixes and voice recordings. The supplied black desktop and phone designs guide the interface, with persistent playback controls and an expanded player.
 
+## Screenshots
+
+| Desktop home | Local music library |
+| --- | --- |
+| ![Auvemir desktop home with playback controls](docs/desktop.png) | ![Auvemir local music library](docs/library.png) |
+
+| Phone home | Expanded player |
+| --- | --- |
+| ![Auvemir phone home screen](docs/mobile.png) | ![Auvemir expanded player on a phone](docs/player.png) |
+
+The captures use the real interface with a synthetic diagnostic track. No commercial audio or sample library is bundled. See [verification notes](docs/VERIFICATION.md) for capture details.
+
 **This is a cross-platform development version. The entire supplied roadmap is not complete.** Shared desktop/mobile sources, encrypted metadata sync, casting and native platform hosts are implemented. Device validation and remaining product work are tracked in [FEATURES.md](docs/FEATURES.md) and [PLATFORMS.md](docs/PLATFORMS.md). Build reports distinguish compilation, signing checks and actual device testing.
 
 ## Run the Linux release

@@ -256,3 +256,7 @@ pub fn user_transport() {
         Ok(())
     });
 }
+
+pub fn reduced_motion() -> Result<bool> {
+    call(|env, app| Ok(env.call_method(app, "reducedMotion", "()Z", &[])?.z()?))
+}

@@ -16,6 +16,7 @@ unsafe extern "C" {
         secret: *const c_char,
     ) -> *mut c_char;
     fn auvemir_shutdown();
+    fn auvemir_reduce_motion() -> bool;
     fn auvemir_user_transport();
     fn auvemir_routes();
     fn auvemir_export(path: *const c_char, name: *const c_char);
@@ -113,4 +114,8 @@ pub fn export_document(path: &str, name: &str) -> Result<()> {
 
 pub fn user_transport() {
     unsafe { auvemir_user_transport() };
+}
+
+pub fn reduced_motion() -> bool {
+    unsafe { auvemir_reduce_motion() }
 }

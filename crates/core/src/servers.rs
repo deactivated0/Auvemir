@@ -311,9 +311,9 @@ impl Server {
                     .into_iter()
                     .flatten()
                     .filter(|f| {
-                        f["type"]
-                            .as_str()
-                            .is_some_and(|mime| mime.starts_with("audio/mp4") || mime.starts_with("audio/webm"))
+                        f["type"].as_str().is_some_and(|mime| {
+                            mime.starts_with("audio/mp4") || mime.starts_with("audio/webm")
+                        })
                     })
                     .max_by_key(|f| {
                         f["bitrate"]

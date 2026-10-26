@@ -1,12 +1,14 @@
 mod app;
 mod artwork;
 mod audio;
+mod capture;
 mod casting;
 mod controls;
 mod credentials;
 mod dsp;
 mod ffmpeg_audio;
 mod fingerprint;
+mod motion;
 mod opus_audio;
 mod recorder;
 mod rooms;
