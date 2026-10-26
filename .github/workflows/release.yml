@@ -111,7 +111,6 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
-          merge-multiple: true
       - name: Select release version and target
         run: |
           if [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]]; then
@@ -124,18 +123,42 @@ jobs:
             target=""
           fi
           printf 'AUVEMIR_TAG=%s\nAUVEMIR_VERSION=%s\nAUVEMIR_RELEASE_TARGET=%s\n' "$tag" "$version" "$target" >> "$GITHUB_ENV"
+      - name: Stage package files and reports
+        run: |
+          python3 - <<'PY'
+          from collections import Counter
+          from pathlib import Path
+          import shutil
+          files = [
+              (artifact.name, source)
+              for artifact in sorted(Path("artifacts").iterdir())
+              for source in sorted(artifact.rglob("*"))
+              if source.is_file() and source.name != "SHA256SUMS"
+          ]
+          if not files:
+              raise SystemExit("No release assets were downloaded")
+          counts = Counter(source.name for _, source in files)
+          output = Path("release-assets")
+          output.mkdir()
+          for artifact, source in files:
+              name = f"{artifact}-{source.name}" if counts[source.name] > 1 else source.name
+              destination = output / name
+              if destination.exists():
+                  raise SystemExit(f"Duplicate release asset: {name}")
+              shutil.copy2(source, destination)
+          PY
       - name: Bundle section screenshots
-        run: zip -qr "artifacts/Auvemir-${AUVEMIR_VERSION}-screenshots.zip" docs/screenshots
+        run: zip -qr "release-assets/Auvemir-${AUVEMIR_VERSION}-screenshots.zip" docs/screenshots
       - name: Create reviewable draft release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          find artifacts -type f ! -name SHA256SUMS -exec sha256sum {} \; > artifacts/SHA256SUMS
+          (cd release-assets && sha256sum -- * > SHA256SUMS)
           release_target=()
           if [[ -n "$AUVEMIR_RELEASE_TARGET" ]]; then
             release_target=(--target "$AUVEMIR_RELEASE_TARGET")
           else
             release_target=(--verify-tag)
           fi
-          gh release create "$AUVEMIR_TAG" artifacts/* "${release_target[@]}" --draft --title "Auvemir $AUVEMIR_VERSION" --notes-file CHANGELOG.md
+          gh release create "$AUVEMIR_TAG" release-assets/* "${release_target[@]}" --draft --title "Auvemir $AUVEMIR_VERSION" --notes-file CHANGELOG.md
