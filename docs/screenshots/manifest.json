@@ -1,0 +1,18 @@
+{
+  "source_sha256": "fbe23cb650e59d76de0edfa78372b7a3bdf60561d9a594baa2f88360f0497302",
+  "version": "Auvemir 0.1.0",
+  "renderer": "Actual Slint 1.18.1 winit software renderer on Linux/Xvfb",
+  "fixture": "12 generated 45-second quiet sine tones and procedural covers; no commercial media",
+  "limitations": "Phone layout rendered on Linux, not physical-device certification. Playback uses a null ALSA sink, not a physical audio measurement. The GIF is a recording, not an FPS benchmark.",
+  "files": {
+    "desktop-equalizer.png": "094688536f1668252b872e7194a75dd059242563f76c780455fc143f441fb9ec",
+    "desktop-home.png": "c11cad441d0d7ed8e635ea480baa2240f477ea89b8f52daf48484e668444a0f6",
+    "desktop-library.png": "f1f246b915f43b490651bfeb02ecf1bcfe8b08be323c19a9f1684445f19908ee",
+    "desktop-light.png": "143f23658a5965a779591bd589ead8f160628ad1c08e61b0f11080de037a3d77",
+    "navigation.gif": "271c84133d7845df2d659cf2ddbcc2fbc26cda632516e7569e7c6b68d6dfea87",
+    "phone-home.png": "a76414fbbc360dbdf362f41089d0417b46a1f2b406f41b1f89405e68c42de91a",
+    "phone-library.png": "c3fd221a034136496b698c55d7e51d096d9055a2c8e2c99e838c06d9fbc37c8b",
+    "phone-player.png": "5d8cddf6e48b15c8b8f61e15b4c4ea2d95ab98f6278819bb138bf88107df11a4",
+    "settings-appearance.png": "1d42017c3aa11caeceb09b31be9ee6bdb0274f6c264968ec9cd46817bd6c65aa"
+  }
+}

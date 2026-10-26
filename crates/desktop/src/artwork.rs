@@ -130,3 +130,50 @@ impl Cache {
         a
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    fn fixture() -> (std::path::PathBuf, Vec<u8>) {
+        let path =
+            std::env::temp_dir().join(format!("auvemir-art-{:016x}.png", rand::random::<u64>()));
+        let pixels = (0..192 * 192)
+            .flat_map(|i| [(i % 256) as u8, ((i / 192) % 256) as u8, 71, 255])
+            .collect::<Vec<_>>();
+        image::save_buffer(&path, &pixels, 192, 192, image::ColorType::Rgba8).unwrap();
+        (path, pixels)
+    }
+    #[test]
+    fn cached_artwork_pixels_and_mutable_copies_are_isolated() {
+        let (path, pixels) = fixture();
+        let mut cache = Cache::default();
+        let art = cache.get(path.to_str());
+        let mut buffer = art.image().to_rgba8().unwrap();
+        assert_eq!(buffer.as_bytes(), pixels);
+        buffer.make_mut_bytes()[0] = 255;
+        assert_eq!(art.image().to_rgba8().unwrap().as_bytes(), pixels);
+        cache.invalidate(path.to_str().unwrap());
+        assert_eq!(art.image().to_rgba8().unwrap().as_bytes(), pixels);
+        std::fs::remove_file(path).unwrap();
+    }
+    #[test]
+    #[ignore = "explicit performance measurement, not a timing assertion"]
+    fn thumbnail_handoff_benchmark() {
+        let (path, pixels) = fixture();
+        let art = Cache::default().get(path.to_str());
+        let mut samples = Vec::new();
+        for _ in 0..7 {
+            let started = std::time::Instant::now();
+            for _ in 0..5000 {
+                std::hint::black_box(art.image());
+            }
+            samples.push(started.elapsed().as_secs_f64() * 1000.);
+        }
+        assert_eq!(art.image().to_rgba8().unwrap().as_bytes(), pixels);
+        println!(
+            "ARTWORK_BENCHMARK {}",
+            serde_json::json!({"handoffs":5000,"size":[192,192],"milliseconds":samples})
+        );
+        std::fs::remove_file(path).unwrap();
+    }
+}

@@ -13,3 +13,6 @@ __pycache__/
 platforms/ios/.build/
 platforms/ios/.swiftpm/
 platforms/ios/xtool/
+
+__pycache__/
+*.pyc

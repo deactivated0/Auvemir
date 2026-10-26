@@ -1,102 +1,136 @@
 # Auvemir
 
-A native Rust + Slint player for music, personal music servers, free audiobooks, podcasts, radio, ambient mixes and voice recordings. The supplied black desktop and phone designs guide the interface, with persistent playback controls and an expanded player.
+### Your audio, in one calm space.
 
-## Screenshots
+A native **Rust and Slint audio player** for your local music library, personal music servers, audiobooks, podcasts, internet radio, ambient mixes and recordings. Keep your files, choose your services, and make room for listening.
 
-| Desktop home | Local music library |
+[![Native quality checks](https://github.com/deactivated0/Auvemir/actions/workflows/ci.yml/badge.svg?branch=Main)](https://github.com/deactivated0/Auvemir/actions/workflows/ci.yml)
+[![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
+[![Rust 1.99](https://img.shields.io/badge/Rust-1.99-orange)](Cargo.toml)
+[![Slint 1.18.1](https://img.shields.io/badge/Slint-1.18.1-green)](crates/desktop/Cargo.toml)
+
+![Auvemir home with a personal library, soft green accents and persistent player controls](docs/screenshots/desktop-home.png)
+
+**Development preview:** build and verification results are documented honestly. Source support for desktop, Android and iOS does not imply signing, receiver validation or physical-device certification. See [verification](docs/TRANSFORMATION.md), [platform status](docs/PLATFORMS.md) and [feature details](docs/FEATURES.md).
+
+[Get started](#get-started) · [User guide](docs/USAGE.md) · [Build and package](docs/BUILDING.md) · [Contribute](CONTRIBUTING.md)
+
+## Made for your listening
+
+- **Your collection comes first.** Incremental imports, album/artist/title/duration sorting, literal search, favorites, playlists and restored queues.
+- **One place for long listens.** Resume audiobooks and podcasts, create bookmarks, browse embedded MPEG-4 chapters and set a sleep timer.
+- **A quieter interface.** Responsive desktop and phone layouts, persistent light or dark appearance, grouped settings and restrained subtitle motion that respects reduced motion.
+- **Connections are your choice.** Personal servers, public catalogs and opt-in metadata services. Credentials use native secure storage, with no plaintext fallback or telemetry.
+
+## Inside the app
+
+| Library | Light appearance |
 | --- | --- |
-| ![Auvemir desktop home with playback controls](docs/desktop.png) | ![Auvemir local music library](docs/library.png) |
+| ![Dark library with imported demo albums and sorting controls](docs/screenshots/desktop-library.png) | ![The same real library in light appearance](docs/screenshots/desktop-light.png) |
 
 | Phone home | Expanded player |
 | --- | --- |
-| ![Auvemir phone home screen](docs/mobile.png) | ![Auvemir expanded player on a phone](docs/player.png) |
+| ![Responsive phone home layout](docs/screenshots/phone-home.png) | ![Expanded phone player with actual demo audio](docs/screenshots/phone-player.png) |
 
-The captures use the real interface with a synthetic diagnostic track. No commercial audio or sample library is bundled. See [verification notes](docs/VERIFICATION.md) for capture details.
+These are real application captures using twelve generated demo tracks and procedural covers. Phone captures exercise the responsive Linux renderer; they do not certify mobile hardware. Reproduce them with the [capture guide](docs/CAPTURES.md).
 
-**This is a cross-platform development version. The entire supplied roadmap is not complete.** Shared desktop/mobile sources, encrypted metadata sync, casting and native platform hosts are implemented. Device validation and remaining product work are tracked in [FEATURES.md](docs/FEATURES.md) and [PLATFORMS.md](docs/PLATFORMS.md). Build reports distinguish compilation, signing checks and actual device testing.
+<details>
+<summary>See navigation and subtitle motion</summary>
 
-## Run the Linux release
+![Real navigation between library, settings and home with gentle subtitle transitions](docs/screenshots/navigation.gif)
 
-The binary requires **glibc 2.39 or newer**, ALSA, fontconfig, FreeType, libxkbcommon, libX11 and libstdc++. Install the DEB, RPM or Arch package matching your distribution, or extract the portable archive and run `./auvemir`. The AppImage includes selected replaceable audio/font/X11 libraries; it still needs glibc 2.39 and host graphics/session services. Compatibility with older distributions is not claimed.
+A short recording of the implemented interface. This GIF is not a frame-rate benchmark.
+</details>
 
-File browsing uses an XDG desktop portal. Paths can also be entered directly. No microphone, network account or audio output is opened at startup. There is no telemetry.
+## Capabilities
 
-## Features
+| Area | What you can do |
+| --- | --- |
+| Local library | Import files or folders, cancel imports, see progress and warnings, sort and search, browse groups, edit tags atomically and manage playlists. Failed scan batches do not mark uncommitted files as scanned. |
+| Playback | Native CPAL output, local seeking, volume, shuffle/repeat, queue reordering, ten-band EQ and pitch-preserving speed from 0.5× to 2×. |
+| Formats | Native MP3, MP2, FLAC, WAV, Vorbis, AAC, ALAC, AIFF and mono/stereo Ogg Opus. Optional system FFmpeg supplies additional decoders after native decoding fails. |
+| Personal servers | Navidrome/Subsonic, WebDAV/Nextcloud folder browsing, Audiobookshelf libraries/tracks/progress and configurable Invidious search/trending. Results are paged. |
+| Spoken audio and radio | LibriVox, podcast directory search, RSS/Atom subscriptions, OPML, Radio Browser failover, custom stations and radio M3U/JSON import/export. |
+| Downloads | One active transfer, progress, pause, validated HTTP Range resume, disk-space checks, 2 GiB limit, atomic completion and BLAKE3 manifests. |
+| Ambient and recording | Generated noise, imported loops, per-layer volume, saved presets, explicit microphone start, pause/resume, level meter and recoverable WAV recording. |
+| Lyrics and metadata | Local LRC, LRCLIB synchronized lyrics, timing adjustments, MusicBrainz, native AcoustID fingerprints, artwork providers and playlist metadata imports. API credentials are user supplied. |
+| Optional sharing | Encrypted metadata sync, encrypted Listen Together rooms with matching local audio, Chromecast control/relay, iOS AirPlay routing and desktop Discord presence. |
+| Listening services | Opt-in durable scrobbling for ListenBrainz-compatible services, Last.fm, Libre.fm and Maloja; JSON history backup and listening analytics. |
 
-- **Local library:** incremental file/folder scanning, atomic tag editing, metadata and artwork, albums, artists, search, favorites, playlists, restored queues, queue reordering, play-next insertion, shuffle and repeat.
-- **Playback:** real CPAL output, bounded decoding outside the audio callback, local seeking, volume, ten-band EQ and pitch-preserving speed from 0.5× to 2×. SoundTouch and EQ run on the producer, with recycled PCM buffers.
-- **Codecs:** native MP3, MP2, FLAC, WAV, Vorbis, AAC, ALAC, AIFF and mono/stereo Ogg Opus. Optional system FFmpeg supplies extended codecs after native decoding fails.
-- **Servers:** Navidrome/Subsonic search and streaming; paged WebDAV/Nextcloud audio with nested folder browsing; paged Audiobookshelf libraries, individual book tracks, downloads and playback progress sync; Invidious search/trending. Server result pages contain up to 100 items; server bookmark sync remains pending.
-- **Discovery:** LibriVox books and RSS chapters, Apple podcast directory search, RSS/Atom subscriptions, Radio Browser directory search/failover, local custom stations, and radio M3U/M3U8 or JSON import/export.
-- **Optional unofficial catalog:** an explicitly configured Invidious instance supplies YouTube search/music trending and public direct AAC streams. Paid/premium/restricted items are rejected. No YouTube account, cipher solver, access-control bypass or online music downloads are included. Availability depends on the chosen instance and applicable service permissions.
-- **Spoken audio:** per-track progress, resume, bookmarks, sleep timer, local/downloaded seeking, personal-server downloads and on-demand M4B/M4A chapter browsing for Nero chapter lists and QuickTime chapter tracks. Seamless remote whole-book seeking remains pending.
-- **Downloads:** progress, pause, entity-validated HTTP Range resume, free-space checks, a 2 GiB file limit, partial files, atomic audio completion and a BLAKE3 manifest. The UI runs one download at a time.
-- **Ambient:** shared-mixer noise and imported loops, individual layer volumes and one saved mix.
-- **Recording:** explicit microphone start, pause/resume, level meter, WAV finalization, interrupted-recording recovery and native file export, using preallocated capture buffers and a separate writer. Physical microphone verification is pending.
-- **Lyrics:** LRCLIB, local LRC, caching, current synchronized line, timing adjustment and import/export.
-- **History/scrobbling:** listening-time analytics, JSON history backup/import, durable offline retries, ListenBrainz-compatible endpoints (including compatible Koito/Multi-Scrobbler configurations), Last.fm, Libre.fm and Maloja adapters, plus now-playing submissions. Music scrobbling is opt-in and counts listened time. Imported history is not automatically scrobbled. Live authenticated checks are pending.
-- **Metadata/imports:** MusicBrainz, native AcoustID fingerprints, Genius metadata/links, Cover Art Archive, Fanart.tv and Spotify/Deezer/YouTube Music playlist metadata imports. Unmatched entries remain saved until audio is added. API credentials are supplied by the user.
-- **Listen Together:** encrypted opt-in rooms synchronize matching, locally available seekable audio. Invitations include a private room key; audio files and account credentials are not shared. Local transport controls leave a followed room. Real-device timing checks remain pending.
-- **Sync:** encrypted file transfer or WebDAV metadata sync for favorites, progress, playlists and selected playback settings, using Argon2id and XChaCha20-Poly1305. Audio files and credentials are excluded. Conflicts use deterministic revisions and deletion tombstones.
-- **Casting:** Chromecast discovery/control, local range streaming and an authenticated-server relay that retains credentials on the sender. iOS includes an AirPlay route picker. A real receiver is required for device validation.
-- **System integration:** MPRIS, Windows SMTC and macOS Now Playing adapters receive metadata and transport actions. Native validation is recorded separately from implementation.
+Authenticated services, casting receivers, microphone hardware and mobile device behavior need their corresponding environments. Read the [feature matrix](docs/FEATURES.md) for implementation limits, including remote whole-book seeking and server bookmark sync.
 
-## Connect a service
+## Get started
 
-Settings → Servers and scrobbling accepts protocol, name, base URL, username and secret. Subsonic/WebDAV use a password; Audiobookshelf and ListenBrainz-compatible services use an API token. Last.fm expects JSON with `api_key`, `api_secret`, and an authenticated `session_key`. Maloja uses its API key. Invidious needs no secret and stays inactive until configured.
+Use **Rust 1.99.0**, C/C++, CMake and Clang/libclang. The lockfile fixes dependency versions.
 
-Credentials use Linux Secret Service, Windows Credential Manager or macOS Keychain. There is no plaintext fallback. Credential-backed connections cannot be saved if secure storage is unavailable. Base URLs must not contain query parameters, fragments or credentials. Authenticated requests never redirect to another host. TLS verification stays enabled. HTTP is permitted for an explicitly configured server; use HTTPS when transport confidentiality is required.
-
-Android uses a process-lifetime application bridge and audio worker, replaceable UI attachments, KeyStore encryption and a native foreground service. Car browsing can initialize the worker without a phone activity. iOS uses Keychain and includes CarPlay browsing source; Apple compilation and approved provisioning remain pending. Settings also provides opt-in desktop Discord activity, encrypted sync and metadata API credentials.
-
-## Build
-
-Use Rust **1.99.0**, C/C++, CMake, Clang/libclang and native audio/font/window dependencies. Cargo.lock fixes dependency versions.
-
-Debian/Ubuntu:
+On Debian/Ubuntu:
 
 ```sh
+git clone https://github.com/deactivated0/Auvemir.git
+cd Auvemir
+rustup toolchain install 1.99.0 --profile minimal --component rustfmt --component clippy
 sudo apt install build-essential cmake clang libclang-dev pkg-config libasound2-dev libfontconfig1-dev libxkbcommon-dev libx11-dev
-cargo build --locked --release -p auvemir -j 2
+cargo +1.99.0 build --locked --release -p auvemir -j 2
 ./target/release/auvemir
 ```
 
-Arch/CachyOS:
+Open **Library → Add files / Add folder**, or type a file/folder path. You can also launch `auvemir /path/to/audio`. Imports run in the background; canceling keeps completed batches. Open **Settings → Appearance and motion** to choose light/dark appearance or reduced motion.
+
+Linux packages built on Ubuntu 24.04 require **glibc 2.39+**. File dialogs use an XDG desktop portal; typed paths are also available. Windows requires MSVC, CMake and LLVM. macOS requires Xcode command-line tools, CMake and LLVM. See [platform build, packaging and signing instructions](docs/BUILDING.md).
+
+## Shortcuts and preferences
+
+Use Ctrl on Linux/Windows or Command on macOS.
+
+| Shortcut | Action |
+| --- | --- |
+| Ctrl/Command + F | Search |
+| Ctrl/Command + O | Add audio |
+| Ctrl/Command + J | Queue |
+| Ctrl/Command + , | Settings |
+| Ctrl/Command + 1 / 2 | Home / Library |
+| Ctrl/Command + / | Shortcut guide |
+| Space | Play/pause outside text entry |
+| Escape | Close panels |
+| Ctrl/Command + Q | Quit with normal cleanup |
+
+Sorting, appearance and reduced-motion overrides persist locally. Playlists and queues retain their intentional ordering. The system motion preference is sampled at startup; the in-app override takes effect immediately.
+
+## Connect your services
+
+Settings groups connections, playback, appearance, files, metadata, sync/rooms and casting. Choose a music connection from Discover. A first-run community Invidious entry can be removed or replaced in Settings; removing it persists. Catalog requests start when you open those sections. Invidious availability depends on the chosen instance; restricted/premium content is not supported, and online music downloads are not provided.
+
+Subsonic/WebDAV use a password; Audiobookshelf and ListenBrainz-compatible services use an API token. Last.fm/Libre.fm expect JSON credentials. Native Secret Service, Windows Credential Manager, Apple Keychain or Android KeyStore stores secrets. Credential-backed connections cannot be saved when secure storage is unavailable. Authenticated redirects stay on the configured host and TLS verification remains enabled. Explicitly configured HTTP servers are allowed; use HTTPS for transport confidentiality. See [connection and privacy details](docs/USAGE.md).
+
+## Develop and verify
 
 ```sh
-sudo pacman -S --needed rust cmake clang pkgconf alsa-lib fontconfig freetype2 libxkbcommon libx11
-cargo build --locked --release -p auvemir -j 2
-```
-
-Windows needs MSVC, CMake and LLVM; set `LIBCLANG_PATH` to LLVM's `bin` directory. macOS needs Xcode command-line tools, CMake and LLVM; set `LIBCLANG_PATH` to LLVM's `lib` directory. Use `-j 1` with limited build RAM. Release LTO is disabled after a reproduced Rust 1.99 thin-LTO linking failure; optimization and stripping remain enabled.
-
-## Verify and package
-
-```sh
-cargo fmt --all --check
-cargo clippy --locked --workspace --all-targets -- -D warnings
-cargo test --locked --workspace
+cargo +1.99.0 fmt --all --check
+cargo +1.99.0 clippy --locked --release --workspace --all-targets -- -D warnings
+cargo +1.99.0 test --locked --release --workspace
+cargo +1.99.0 build --locked --release -p auvemir -j 2
 python3 tests/verify_codecs.py target/release/auvemir --extended
-python3 packaging/build_linux.py portable
-python3 packaging/build_linux.py deb
-python3 packaging/build_linux.py rpm
-python3 packaging/build_linux.py arch
-python3 packaging/build_appimage.py
+python3 tests/verify_desktop.py target/release/auvemir
+python3 tools/capture_screenshots.py target/release/auvemir
 ```
 
-Packaging needs `dpkg-deb`, `rpmbuild` and `zstd` for their formats. AppImage tooling is verified against SHA-256 from the upstream GitHub release. Windows NSIS and macOS app/DMG scripts are included. GitHub workflows build native desktop architectures, supply corresponding source and create a draft release after tag builds pass. Signing identities and platform verification are not fabricated.
+Native UI verification and capture need Python/Pillow, FFmpeg, Xvfb, xauth and xdotool on Linux. They run against disposable demo profiles. CI runs native Rust checks on Linux, Windows and macOS, with Linux journeys and capture artifacts. Mobile and release workflows are included separately. [Performance evidence and remaining limitations](docs/TRANSFORMATION.md) distinguish measurements from expectations.
 
-On Windows, `python packaging/build_windows.py` creates a portable ZIP and NSIS installer; install NSIS first. MSVC packages use the static CRT. GNU cross builds require the matching runtime DLLs via `--runtime-dir`.
+`crates/core` owns SQLite, scanning, queues, feeds, catalogs, downloads, server protocols, lyrics and sync. `crates/desktop` owns Slint, audio/DSP, artwork, recording, native credentials and system controls. `ui` holds reusable native components and design tokens. No Electron or embedded browser is used.
 
-On Linux, `python3 packaging/bootstrap_android.py /path/to/android-sdk` installs verified SDK/NDK packages. Set `ANDROID_HOME`, `ANDROID_NDK_ROOT` and `JAVA_HOME` (JDK 17), add the Rust Android target, then run `python3 packaging/build_android.py --arch arm64`. The default APK uses a development key; a supplied `AUVEMIR_ANDROID_KEYSTORE`, alias and password enable your own signing identity. APK signature, ZIP alignment and native ELF alignment are checked. Preserve your signing key privately for updates.
+## Troubleshooting
 
-`bash packaging/build_ios.sh` uses the Apple SDK on macOS, or xtool with a configured Apple SDK on Linux. The macOS route produces an ad-hoc signed IPA for subsequent provisioning. An Apple signing identity/profile is required for installation on a device. The mobile workflow builds Android packages and the unsigned iOS package without publishing them.
+| Symptom | Check |
+| --- | --- |
+| Build cannot find ALSA or libclang | Install native dependencies and set `LIBCLANG_PATH` to LLVM's library directory; use `-j 1` on memory-constrained machines. |
+| File dialog does not open | Install your desktop's XDG portal; enter a path directly while diagnosing the portal. |
+| A connection cannot save | Start/unlock your operating system's credential store. There is no insecure fallback. |
+| A catalog fails | Check network access and the configured server; community endpoints can go offline. Local playback remains available. |
+| Unsupported audio format | Install system FFmpeg and retry, or inspect with `auvemir --decode FILE`. |
+| Startup or data issue | Run with `RUST_LOG=auvemir=debug`; `AUVEMIR_DATA_DIR` selects a separate profile. Back up existing data before manual changes. |
 
-`auvemir --decode FILE` checks decoding. `auvemir --play FILE` checks output for at most 60 seconds. `AUVEMIR_DATA_DIR` overrides app data storage; `AUVEMIR_FFMPEG` selects the optional FFmpeg executable. Developer screenshot modes are documented in [VERIFICATION.md](docs/VERIFICATION.md).
+## Contributing and license
 
-## Source and license
+See [CONTRIBUTING.md](CONTRIBUTING.md) for focused changes and verification. Report reproducible issues without account secrets or private media.
 
-`crates/core` owns SQLite, scanning, source identity, queues, feeds, catalogs, downloads, servers, lyrics and scrobbling. `crates/desktop` owns Slint, audio/DSP, capture, credentials, artwork and media controls. No Electron or embedded browser is used.
-
-GPL-3.0-only. Slint uses its GPL option. Dependencies retain their licenses; SoundTouch uses LGPL-2.1. The corresponding-source archive includes the exact locked Cargo sources and build configuration. System FFmpeg is optional and is not bundled. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). No commercial audio, supplied reference artwork, credentials or user libraries are included.
+**GPL-3.0-only.** Slint uses its GPL option. Dependencies retain their licenses, including LGPL-2.1 SoundTouch. Corresponding-source packaging and notices are described in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). System FFmpeg is optional and not bundled. No commercial audio, account credentials or user libraries are included.

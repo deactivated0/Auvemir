@@ -1,5 +1,7 @@
 # Performance implementation and evidence
 
+> This document describes earlier published component work. The two performance passes for the redesigned application and their current measurements are recorded in [TRANSFORMATION.md](TRANSFORMATION.md).
+
 The optimization changes preserve media values, revisions, settings, protocol formats, crypto parameters and rendering cadence. Queue editing, radio playlists, native metadata corrections and casting relay are separate feature changes. No codec, DSP, capture callback, cryptographic work factor or public API was removed to obtain these results.
 
 ## Bottlenecks and changes
@@ -36,6 +38,5 @@ The sync-apply loop now reuses prepared statements for repeated record, favorite
 
 Idle scheduling now blocks on commands when no timed work is due. A sleep timer on paused audio wakes at its deadline rather than four times per second. Disabled scrobblers and in-flight submissions no longer cause idle polling. Active audio UI and Cast refresh intervals remain unchanged. Native Android metadata is updated only when metadata changes, audio-focus requests are reused while granted, and import/browser worker threads time out after inactivity. Desktop UI dispatch keeps its original direct weak handle without the Android attachment mutex.
 
-## Checkpoint 22 repeat
 
 A fresh release-mode run of the same deterministic 5,000-track workload produced a 267.28 ms median first sync and a 202.83 ms median steady sync across three trials. This is 8.62× faster on first sync and 1.28× faster on steady sync than the saved baseline. All three snapshots retain the baseline hash. The run did not capture RSS; the separate peak-memory measurements above remain the memory evidence. Raw timings are in `performance-checkpoint22.json`.

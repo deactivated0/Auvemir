@@ -169,6 +169,11 @@ pub(crate) fn start_background() -> Result<()> {
 }
 
 fn submit(sender: &SyncSender<Command>, cmd: Command, weak: &slint::Weak<MainWindow>) {
+    match &cmd {
+        Command::Favorite(id) => tracing::debug!(media_id = %id, "Toggle favorite input"),
+        Command::Play(id) => tracing::debug!(media_id = %id, "Play input"),
+        _ => {}
+    }
     if sender.try_send(cmd).is_err() {
         let _ = weak.upgrade_in_event_loop(|ui| {
             ui.set_status("The task queue is busy. Try again shortly.".into())
@@ -1122,6 +1127,7 @@ impl Worker {
         if matches!(
             &cmd,
             Command::Navigate(_)
+                | Command::OpenFile(_)
                 | Command::Search(_, _)
                 | Command::Collection(_)
                 | Command::OpenPlaylist(_)
@@ -1363,13 +1369,13 @@ impl Worker {
                             async move { Ok(Command::Catalog(providers.books("").await?)) },
                         );
                     }
-                } else if p == 4 {
-                    if let Ok(providers) = self.providers() {
-                        self.status = "Loading popular podcasts…".into();
-                        self.view_job(async move {
-                            Ok(Command::Catalog(providers.podcasts("").await?))
-                        });
-                    }
+                } else if p == 4
+                    && let Ok(providers) = self.providers()
+                {
+                    self.status = "Loading popular podcasts…".into();
+                    self.view_job(
+                        async move { Ok(Command::Catalog(providers.podcasts("").await?)) },
+                    );
                 }
             }
             Command::Play(id) => {
@@ -2127,11 +2133,6 @@ impl Worker {
                     service.validate()?;
                     crate::credentials::save(&id, &secret)?;
                     self.services.retain(|s| s.id != id);
-                    if self.active_server.as_deref() == Some(id) {
-                        self.active_server = self.servers.first().map(|s| s.id.clone());
-                        self.db
-                            .set("active-server", self.active_server.as_deref().unwrap_or(""))?;
-                    }
                     self.services.push(service);
                     self.db
                         .set("scrobblers", &serde_json::to_string(&self.services)?)?;
@@ -4668,6 +4669,139 @@ mod state_tests {
         fn drop(&mut self) {
             let _ = std::fs::remove_dir_all(&self.0);
         }
+    }
+
+    fn worker_fixture() -> (StateDirectory, Worker) {
+        let directory = StateDirectory(
+            std::env::temp_dir().join(format!("auvemir-state-{:016x}", rand::random::<u64>())),
+        );
+        std::fs::create_dir(&directory.0).unwrap();
+        let (tx, _rx) = mpsc::sync_channel(64);
+        let worker = Worker::new(directory.0.clone(), tx, Default::default()).unwrap();
+        (directory, worker)
+    }
+    #[test]
+    fn late_catalog_and_errors_do_not_replace_current_screen() {
+        let (_directory, mut worker) = worker_fixture();
+        worker.page = 1;
+        worker.view_generation = 2;
+        worker.status = "Current".into();
+        let book = CatalogBook {
+            id: "late".into(),
+            title: "Late".into(),
+            author: "A".into(),
+            language: "English".into(),
+            feed_url: "https://example.test/feed".into(),
+            cover: None,
+        };
+        worker
+            .handle(Command::ViewResult(
+                1,
+                Box::new(Command::Catalog(vec![book])),
+            ))
+            .unwrap();
+        worker
+            .handle(Command::ViewResult(
+                1,
+                Box::new(Command::Notice("Old error".into())),
+            ))
+            .unwrap();
+        assert!(worker.collections.is_empty());
+        assert_eq!(worker.page, 1);
+        assert_eq!(worker.status, "Current");
+    }
+    #[test]
+    fn subscription_completion_after_navigation_persists_without_jumping() {
+        let (_directory, mut worker) = worker_fixture();
+        worker.page = 1;
+        worker.view_generation = 2;
+        let item = Media::new(
+            MediaKind::Podcast,
+            "rss",
+            "https://example.test/episode.mp3",
+            "Episode",
+        );
+        worker
+            .handle(Command::ViewResult(
+                1,
+                Box::new(Command::Feed(
+                    "https://example.test/feed".into(),
+                    "Feed".into(),
+                    MediaKind::Podcast,
+                    vec![item.clone()],
+                )),
+            ))
+            .unwrap();
+        assert_eq!(worker.page, 1);
+        assert_eq!(worker.db.get(&item.id).unwrap(), Some(item));
+        assert_eq!(worker.db.subscriptions().unwrap().len(), 1);
+    }
+    #[test]
+    fn canceled_import_ignores_already_queued_batches_and_completion() {
+        let (_directory, mut worker) = worker_fixture();
+        worker.scan_generation = 1;
+        worker.scanning = true;
+        worker.action("cancel-import").unwrap();
+        let status = worker.status.clone();
+        let item = Media::new(MediaKind::LocalMusic, "local", "/late.flac", "Late");
+        worker
+            .handle(Command::Scanned(
+                1,
+                auvemir_core::library::Scanned {
+                    items: vec![item],
+                    fingerprints: vec![],
+                    errors: vec![],
+                },
+            ))
+            .unwrap();
+        worker.handle(Command::ScanFinished(1, Ok(()))).unwrap();
+        assert_eq!(worker.db.count().unwrap(), 0);
+        assert_eq!(worker.status, status);
+        assert!(!worker.scanning);
+    }
+    #[test]
+    fn scan_database_failure_cancels_and_cannot_report_success() {
+        let (_directory, mut worker) = worker_fixture();
+        worker.scan_generation = 4;
+        worker.scanning = true;
+        let item = Media::new(MediaKind::LocalMusic, "local", "/failed.flac", "Failed");
+        assert!(
+            worker
+                .handle(Command::Scanned(
+                    4,
+                    auvemir_core::library::Scanned {
+                        items: vec![item],
+                        fingerprints: vec![("/failed.flac".into(), 1, u64::MAX)],
+                        errors: vec![]
+                    }
+                ))
+                .is_err()
+        );
+        assert!(!worker.scanning);
+        assert!(worker.scan_cancel.load(Ordering::Relaxed));
+        assert_eq!(worker.db.count().unwrap(), 0);
+        worker.handle(Command::ScanFinished(4, Ok(()))).unwrap();
+        assert!(!worker.status.contains("Import complete"));
+    }
+    #[test]
+    fn preferences_and_removed_connection_survive_restart() {
+        let (directory, mut worker) = worker_fixture();
+        worker
+            .handle(Command::Preference("appearance-light".into(), true))
+            .unwrap();
+        worker
+            .handle(Command::Preference("motion-reduced".into(), true))
+            .unwrap();
+        worker.handle(Command::Sort(2)).unwrap();
+        worker.action("disconnect:ytmusic").unwrap();
+        drop(worker);
+        let (tx, _rx) = mpsc::sync_channel(64);
+        let worker = Worker::new(directory.0.clone(), tx, Default::default()).unwrap();
+        assert!(worker.light);
+        assert!(worker.reduce_motion);
+        assert_eq!(worker.sort, MediaSort::Artist);
+        assert!(worker.servers.is_empty());
+        assert!(worker.active_server.is_none());
     }
 
     #[test]

@@ -25,7 +25,7 @@ component ScreenHeading inherits Rectangle {
     height: root.mobile ? 96px : 90px;
     init => {root.shown=root.subtitle;root.entering=!Design.reduced;}
     changed subtitle => { if(Design.reduced){root.shown=root.subtitle;root.entering=false;}else{root.entering=true;} }
-    Timer { interval: 90ms; running: root.entering; repeated: false; triggered => {root.shown=root.subtitle;root.entering=false;} }
+    Timer { interval: 90ms; running: root.entering; triggered => {root.shown=root.subtitle;root.entering=false;} }
     Text { x: 0px; y: 0px; width: parent.width; height: 42px; text: root.title; color: Design.text; font-size: root.mobile ? 28px : 32px; font-weight: 700; overflow: elide; }
     Text { x: 0px; y: 49px + (root.entering && !Design.reduced ? 5px : 0px); width: parent.width; height: root.mobile ? 44px : 36px; text: root.shown; color: Design.muted; font-size: 13px; wrap: word-wrap; opacity: root.entering && !Design.reduced ? 0 : 1;
         animate y { duration: Design.reduced ? 0ms : 270ms; easing: ease-out; }
@@ -40,6 +40,11 @@ component Slider inherits Rectangle {
     in property <bool> enabled: true;
     in property <bool> continuous: true;
     callback changed();
+    in property <string> label: "Value";
+    accessible-label: root.label; accessible-enabled: root.enabled;
+    accessible-action-set-value(v) => {if(root.enabled && v.is-float()){root.value=max(root.minimum,min(root.maximum,v.to-float()));root.changed();}}
+    accessible-action-increment => {if(root.enabled){root.value=min(root.maximum,root.value+(root.maximum - root.minimum)/100);root.changed();}}
+    accessible-action-decrement => {if(root.enabled){root.value=max(root.minimum,root.value - (root.maximum - root.minimum)/100);root.changed();}}
     accessible-role: slider; accessible-value: root.value; accessible-value-minimum: root.minimum; accessible-value-maximum: root.maximum; accessible-value-step: (root.maximum - root.minimum)/100;
     height: 22px; min-width: 50px; preferred-width: 160px;
     property <float> fraction: maximum > minimum ? max(0, min(1, (value - minimum) / (maximum - minimum))) : 0;
@@ -86,10 +91,11 @@ component Action inherits Rectangle {
     in property <bool> enabled: true;
     callback triggered();
     forward-focus: focus;
-    accessible-role: button; accessible-label: text == "▶" ? "Play" : text == "Ⅱ" ? "Pause" : text == "♥" ? "Remove from favorites" : text == "♡" ? "Add to favorites" : text == "⚙" ? "Settings" : text;
+    accessible-role: button; accessible-label: text == "▶" ? "Play" : text == "Ⅱ" ? "Pause" : text == "♥" ? "Remove from favorites" : text == "♡" ? "Add to favorites" : text == "⚙" ? "Settings" : text == "+" ? "Add to queue" : text == "Next" ? "Play next" : text == "|‹" ? "Previous track" : text == "›|" ? "Next track" : text == "↑" ? "Move up" : text == "↓" ? "Move down" : text == "×" ? "Remove from queue" : text;
+    accessible-enabled: root.enabled; accessible-action-default => {if(root.enabled){root.triggered();}}
     preferred-width: text == "▶" || text == "♥" || text == "♡" || text == "⚙" ? 36px : label.preferred-width + 24px;
     min-width: 24px;
-    height: 34px;
+    height: 34px; horizontal-stretch: 0; vertical-stretch: 0;
     border-radius: 7px;
     background: !root.enabled ? Design.sidebar : root.light ? Design.accent : root.selected ? Design.accent-soft : touch.pressed ? Design.raised : touch.has-hover ? Design.hover : Design.surface;
     animate background { duration: Design.reduced ? 0ms : 130ms; }
@@ -112,7 +118,7 @@ component NavItem inherits Rectangle {
     accessible-role: button; accessible-label: text; accessible-action-default => {root.triggered();}
     height: 40px; border-radius: 8px;
     if root.selected: Rectangle { x: 0px; y: 12px; width: 3px; height: 16px; border-radius: 2px; background: Design.accent; }
-    background: root.selected ? Design.raised : touch.has-hover ? Design.surface : Design.canvas;
+    background: root.selected ? Design.accent-soft : focus.has-focus || touch.has-hover ? Design.hover : Design.canvas;
     Text { x: 13px; y: 0px; width: parent.width - 26px; height: parent.height; text: root.text; overflow: elide; color: root.selected ? Design.accent : Design.muted; font-size: 13px; vertical-alignment: center; }
     focus := FocusScope { key-pressed(event) => { if(event.text == "\n" || event.text == " ") {root.triggered();return accept;}return reject;} }
     touch := TouchArea { clicked => {focus.focus();root.triggered();} }
@@ -139,7 +145,7 @@ component Cover inherits Rectangle {
     in property <image> artwork;
     background: Design.raised; border-radius: 8px; border-width: 1px; border-color: Design.raised;
     if root.kind == "radio" || root.kind == "audiobook" || root.kind == "podcast": Text { text: root.kind == "radio" ? "◉" : root.kind == "audiobook" ? "▤" : "◌"; color: Design.muted; font-size: 28px; vertical-alignment: center; horizontal-alignment: center; }
-    if root.kind != "radio" && root.kind != "audiobook" && root.kind != "podcast": Image { source: @image-url("icons/music.svg"); width: 28px; height: 28px; x: (parent.width - self.width)/2; y: (parent.height - self.height)/2; }
+    if root.kind != "radio" && root.kind != "audiobook" && root.kind != "podcast": Image { source: @image-url("icons/music.svg"); colorize: Design.muted; width: 28px; height: 28px; x: (parent.width - self.width)/2; y: (parent.height - self.height)/2; }
     if root.artwork.width > 0: Image { source: root.artwork; image-fit: cover; width: parent.width; height: parent.height; }
 }
 component QuickCard inherits Rectangle {
@@ -351,7 +357,7 @@ export component MainWindow inherits Window {
                 height: 66px; padding-top: 16px; padding-bottom: 16px; padding-left: root.mobile ? 20px : 28px; padding-right: root.mobile ? 20px : 28px; spacing: 12px;
                 if root.mobile: Text { text: "Auvemir"; color: Design.text; font-weight: 700; font-size: 15px; vertical-alignment: center; }
                 Rectangle { horizontal-stretch: 1; }
-                header-search := LineEdit { visible: !root.mobile; text <=> root.search-query; placeholder-text: "Search songs, artists, podcasts, and more…"; preferred-width: 330px; height: 32px; accepted => {root.remote-search(self.text,root.page);} }
+                header-search := LineEdit { visible: !root.mobile; horizontal-stretch: 0; text <=> root.search-query; placeholder-text: "Search songs, artists, podcasts, and more…"; preferred-width: root.mobile ? 0px : 330px; min-width: 0px; max-width: root.mobile ? 0px : 330px; height: 32px; accepted => {root.remote-search(self.text,root.page);} }
                 Action { text: "Queue"; triggered => {root.navigate(8);} }
                 Action { text: "⚙"; triggered => {root.navigate(11);} }
             }
@@ -421,9 +427,9 @@ export component MainWindow inherits Window {
                     }
                     if root.page == 3: HorizontalLayout {
                         spacing: 10px;
-                        Action { text: "Online books"; selected: root.audiobook-section == 0; triggered => {root.audiobook-section = 0; root.action("books-top");} }
+                        Action { text: "Online"; selected: root.audiobook-section == 0; triggered => {root.audiobook-section = 0; root.action("books-top");} }
                         Action { text: "Genres"; selected: root.audiobook-section == 0 && root.collections.length > 0; triggered => {root.audiobook-section = 0; root.action("books-genres");} }
-                        Action { text: "Local books"; selected: root.audiobook-section == 1; triggered => {root.audiobook-section = 1; root.action("books-local");} }
+                        Action { text: "Local files"; selected: root.audiobook-section == 1; triggered => {root.audiobook-section = 1; root.action("books-local");} }
                         Rectangle {}
                     }
                     if root.page == 3 && root.audiobook-section == 1: VerticalLayout { spacing: 10px;
@@ -458,6 +464,9 @@ export component MainWindow inherits Window {
                         spacing: 10px;
                         Action { text: "Popular"; triggered => {root.action("podcasts-top");} }
                         Action { text: "Genres"; triggered => {root.action("podcasts-genres");} }
+                        Rectangle {}
+                    }
+                    if root.page == 4: HorizontalLayout { spacing: 10px;
                         Action { text: "Refresh"; triggered => {root.action("refresh-feeds");} }
                         Action { text: "Following"; triggered => {root.action("subscriptions");} }
                         Rectangle {}
@@ -481,7 +490,7 @@ export component MainWindow inherits Window {
                     }
                     if root.page == 5 || root.page == 9: HorizontalLayout {
                         spacing: 10px;
-                        LineEdit { text <=> root.search-query; placeholder-text: root.page == 5 ? "Search stations worldwide" : "Search your local library"; height: 36px; accepted => {root.remote-search(self.text,root.page);} }
+                        LineEdit { init => {if(root.page==9){self.focus();}} text <=> root.search-query; placeholder-text: root.page == 5 ? "Search stations worldwide" : "Search your local library"; height: 36px; accepted => {root.remote-search(self.text,root.page);} }
                         Action { text: "Search"; triggered => {root.remote-search(root.search-query,root.page);} }
                         if root.page == 5: Action { text: "+ Station"; triggered => {root.station-id="";root.station-name="";root.station-url="";root.station-country="";root.station-language="";root.station-tags="";root.station-logo="";root.radio-editor=true;} }
                     }
@@ -491,12 +500,15 @@ export component MainWindow inherits Window {
                     if root.page == 6: HorizontalLayout { spacing: 10px; Action { text: "Save mix"; triggered => {root.action("ambient-save");} } Action { text: "Restore mix"; triggered => {root.action("ambient-restore");} } if root.ambient-layers.length > 0: Action { text: root.ambient-playing ? "Pause mix" : "Resume mix"; triggered => {root.action("ambient-toggle");} } Rectangle {} }
                     if root.page == 6: HorizontalLayout { spacing: 10px; LineEdit { text <=> root.ambient-preset-name; placeholder-text: "Name this mix"; } Action { text: "Save preset"; triggered => {root.ambient-preset("save", root.ambient-preset-name);} } }
                     if root.page == 6: VerticalLayout { spacing: 8px; for preset in root.ambient-presets: HorizontalLayout { spacing: 10px; VerticalLayout { Text { text: preset.title; color: Design.text; overflow: elide; } Text { text: preset.subtitle; color: Design.muted; font-size: 11px; } } Action { text: "Restore"; triggered => {root.ambient-preset-name=preset.title;root.ambient-preset("restore",preset.id);} } Action { text: "Delete"; triggered => {root.ambient-preset("delete",preset.id);} } } }
-                    if root.page == 6: VerticalLayout { spacing: 8px; for layer in root.ambient-layers: HorizontalLayout { spacing: 10px; Text { text: layer.name; color: Design.muted; vertical-alignment: center; } Slider { maximum: 100; value: layer.volume; changed => {root.layer-volume(layer.id,self.value);} } } }
+                    if root.page == 6: VerticalLayout { spacing: 8px; for layer in root.ambient-layers: HorizontalLayout { spacing: 10px; Text { text: layer.name; color: Design.muted; vertical-alignment: center; } Slider { label: layer.name + " volume"; maximum: 100; value: layer.volume; changed => {root.layer-volume(layer.id,self.value);} } } }
                     if root.page == 7: HorizontalLayout { spacing: 10px; Action { text: "Rename / tags"; triggered => {root.action("edit-tags");} } Action { text: "Export audio"; triggered => {root.files-action("export-current",root.import-path);} } Rectangle {} }
                     if root.page == 8: HorizontalLayout {
                         spacing: 10px;
                         Action { text: "Clear"; triggered => {root.action("clear-queue");} }
                         Action { text: "Shuffle"; triggered => {root.action("shuffle");} }
+                        Rectangle {}
+                    }
+                    if root.page == 8: HorizontalLayout { spacing: 10px;
                         LineEdit { text <=> root.playlist-name; placeholder-text: "Playlist name"; height: 34px; }
                         Action { text: "Save"; triggered => {root.save-playlist(root.playlist-name);} }
                     }
@@ -505,10 +517,10 @@ export component MainWindow inherits Window {
                         ComboBox { model: ["Playback and equalizer", "Appearance and motion", "Files and playlists", "Servers and scrobbling", "Metadata and lyrics", "Sync and listening rooms", "Casting and Discord"]; current-index <=> root.settings-section; }
                         if root.settings-section == 0: VerticalLayout { spacing: 16px;
                         Text { text: "Playback"; color: Design.text; font-size: 18px; font-weight: 700; }
-                        HorizontalLayout { Text { text: "Playback speed"; color: Design.muted; vertical-alignment: center; } Slider { enabled: !root.casting; minimum: 0.5; maximum: 2; value <=> root.speed; changed => {root.set-speed(self.value);} } Text { text: round(root.speed * 100)/100 + "×"; color: Design.text; width: 44px; vertical-alignment: center; } }
+                        HorizontalLayout { Text { text: "Playback speed"; color: Design.muted; vertical-alignment: center; } Slider { label: "Playback speed"; enabled: !root.casting; minimum: 0.5; maximum: 2; value <=> root.speed; changed => {root.set-speed(self.value);} } Text { text: round(root.speed * 100)/100 + "×"; color: Design.text; width: 44px; vertical-alignment: center; } }
                         Text { text: "Playback speed preserves pitch."; color: Design.muted; }
                         Text { text: "Equalizer"; color: Design.text; font-size: 18px; font-weight: 700; }
-                        for band[index] in root.eq-bands: HorizontalLayout { Text { text: band.name; width: 70px; color: Design.muted; vertical-alignment: center; } Slider { enabled: !root.casting; minimum: -12; maximum: 12; value: band.gain; changed => {root.set-eq(index,self.value);} } Text { text: round(band.gain*10)/10 + " dB"; color: Design.muted; width: 60px; vertical-alignment: center; } }
+                        for band[index] in root.eq-bands: HorizontalLayout { Text { text: band.name; width: 70px; color: Design.muted; vertical-alignment: center; } Slider { label: band.name + " equalizer gain"; enabled: !root.casting; minimum: -12; maximum: 12; value: band.gain; changed => {root.set-eq(index,self.value);} } Text { text: round(band.gain*10)/10 + " dB"; color: Design.muted; width: 60px; vertical-alignment: center; } }
                         Action { text: "Reset equalizer"; triggered => {root.action("eq-reset");} }
                         HorizontalLayout { LineEdit { text <=> root.sleep-minutes; placeholder-text: "Minutes"; height: 34px; } Action { text: "Sleep timer"; triggered => {root.set-sleep(root.sleep-minutes);} } Action { text: "Off"; triggered => {root.set-sleep("0");} } }
                         }
@@ -538,7 +550,8 @@ export component MainWindow inherits Window {
                         }
                         if root.settings-section == 4: VerticalLayout { spacing: 16px;
                         Text { text: "Metadata and playlist imports"; color: Design.text; font-size: 18px; font-weight: 700; }
-                        HorizontalLayout { Action { text: "MusicBrainz"; triggered => {root.action("metadata-search");} } Action { text: "Recognize audio"; triggered => {root.action("metadata-recognize");} } Action { text: "Genius"; triggered => {root.action("metadata-genius");} } Rectangle {} }
+                        HorizontalLayout { Action { text: "MusicBrainz"; triggered => {root.action("metadata-search");} } Action { text: "Recognize audio"; triggered => {root.action("metadata-recognize");} } Rectangle {} }
+                        Action { text: "Genius"; triggered => {root.action("metadata-genius");} }
                         Text { text: "Recognition sends a fingerprint and duration to AcoustID. Metadata matches are reviewed before editing tags."; color: Design.muted; wrap: word-wrap; }
                         HorizontalLayout { Action { text: "Release cover"; triggered => {root.action("metadata-cover");} } Action { text: "Artist artwork"; triggered => {root.action("metadata-fanart");} } Rectangle {} }
                         ComboBox { model: ["Genius access token","AcoustID client key","Fanart.tv API key","Spotify access token","YouTube Data API key"]; current-index <=> root.api-type; }
@@ -575,7 +588,8 @@ export component MainWindow inherits Window {
                         }
                         Text { text: "Casting"; color: Design.text; font-size: 18px; font-weight: 700; }
                         Text { text: root.casting ? "Connected to a Cast receiver" : "Play audio on a receiver on your private network."; color: Design.muted; wrap: word-wrap; }
-                        HorizontalLayout { Action { text: "Find receivers"; triggered => {root.action("cast-discover");} } Action { text: "Disconnect"; triggered => {root.action("cast-disconnect");} } Action { text: "AirPlay"; visible: root.native-airplay; triggered => {root.action("airplay");} } Rectangle {} }
+                        HorizontalLayout { Action { text: "Find receivers"; triggered => {root.action("cast-discover");} } Action { text: "Disconnect"; triggered => {root.action("cast-disconnect");} } Rectangle {} }
+                        if root.native-airplay: Action { text: "AirPlay"; triggered => {root.action("airplay");} }
                         LineEdit { text <=> root.cast-address; placeholder-text: "Receiver IP address"; height: 36px; }
                         Action { text: "Connect receiver"; triggered => {root.connect-cast(root.cast-address);} }
                         }
@@ -656,27 +670,27 @@ export component MainWindow inherits Window {
                         for track[i] in root.tracks: Rectangle {
                             height: root.mobile ? 76px : 70px; border-radius: 6px;
                             background: track.id == root.current-id ? Design.accent-soft : row-touch.has-hover ? Design.surface : Design.sidebar;
-                            border-width: 1px; border-color: track.id == root.current-id ? Design.border : #131313;
-                            HorizontalLayout { spacing: 12px; padding-left: 6px; padding-right: 6px;
-                                Cover { title: track.title; kind: track.kind; artwork: track.artwork; width: 44px; height: 44px; vertical-stretch: 0; }
+                            border-width: 1px; border-color: track.id == root.current-id || row-focus.has-focus ? Design.accent : Design.border;
+                            row-touch := TouchArea { x: 0px; y: 0px; width: parent.width; height: parent.height; clicked => {row-focus.focus();root.play-track(track.id);} }
+                            HorizontalLayout { spacing: 12px; padding-left: 6px; padding-right: 6px; padding-top: root.mobile ? 16px : 13px; padding-bottom: root.mobile ? 16px : 13px;
+                                Rectangle { width: 44px; horizontal-stretch: 0; Cover { x: 0px; y: (parent.height - self.height)/2; title: track.title; kind: track.kind; artwork: track.artwork; width: 44px; height: 44px; } }
                                 VerticalLayout { alignment: center; spacing: 4px;
                                     Text { text: track.title; color: Design.text; font-size: 13px; overflow: elide; }
                                     Text { text: track.artist + (track.downloaded ? " · Offline" : ""); color: Design.muted; font-size: 11px; overflow: elide; }
                                 }
                                 if !root.mobile: Text { text: track.album; color: Design.muted; font-size: 12px; preferred-width: 160px; horizontal-stretch: 0; overflow: elide; vertical-alignment: center; }
                                 if !root.mobile || root.page == 8: Text { text: track.duration; color: Design.muted; font-size: 11px; width: 58px; vertical-alignment: center; }
-                                Action { text: track.favorite ? "♥" : "♡"; width: 32px; triggered => {root.favorite-track(track.id);} }
-                                if root.page != 8: Action { text: "+"; width: 32px; triggered => {root.action("queue-add:" + track.id);} }
-                                if root.page != 8 && root.page != 5 && !root.mobile: Action { text: "Next"; width: 46px; triggered => {root.action("queue-next:" + track.id);} }
-                                if root.page == 8: Action { text: "↑"; width: 28px; enabled: i > 0; triggered => {root.action("queue-up:" + i);} }
-                                if root.page == 8: Action { text: "↓"; width: 28px; enabled: i + 1 < root.tracks.length; triggered => {root.action("queue-down:" + i);} }
-                                if root.page == 8: Action { text: "×"; width: 32px; triggered => {root.action("queue-remove:" + i);} }
-                                if root.page == 5: Action { text: "⋯"; width: 32px; triggered => {root.edit-station(track.id);root.radio-editor=true;} }
+                                Action { height: 44px; text: track.favorite ? "♥" : "♡"; width: 32px; triggered => {root.favorite-track(track.id);} }
+                                if root.page != 8: Action { height: 44px; text: "+"; width: 32px; triggered => {root.action("queue-add:" + track.id);} }
+                                if root.page != 8 && root.page != 5 && !root.mobile: Action { height: 44px; text: "Next"; width: 46px; triggered => {root.action("queue-next:" + track.id);} }
+                                if root.page == 8: Action { height: 44px; text: "↑"; width: 28px; enabled: i > 0; triggered => {root.action("queue-up:" + i);} }
+                                if root.page == 8: Action { height: 44px; text: "↓"; width: 28px; enabled: i + 1 < root.tracks.length; triggered => {root.action("queue-down:" + i);} }
+                                if root.page == 8: Action { height: 44px; text: "×"; width: 32px; triggered => {root.action("queue-remove:" + i);} }
+                                if root.page == 5: Action { height: 44px; text: "⋯"; width: 32px; triggered => {root.edit-station(track.id);root.radio-editor=true;} }
                             }
                             accessible-role: button; accessible-label: track.title + " by " + track.artist;
                             accessible-action-default => {root.play-track(track.id);}
                             row-focus := FocusScope { key-pressed(event) => { if(event.text=="\n"){root.play-track(track.id);return accept;}if(event.text==" "){if(track.id==root.current-id){root.action("toggle");}else{root.play-track(track.id);}return accept;}return reject;} }
-                            row-touch := TouchArea { width: parent.width - (root.page == 8 ? 168px : root.page == 5 ? 132px : !root.mobile ? 146px : 88px); clicked => {row-focus.focus();root.play-track(track.id);} }
                         }
                     }
                     if root.tracks.length == 100 || root.page-offset > 0 || root.next-page-enabled: HorizontalLayout { Action { text: "Previous page"; enabled: root.page-offset > 0; triggered => {root.action("page-prev");} } Action { text: "Next page"; enabled: root.next-page-enabled; triggered => {root.action("page-next");} } Rectangle {} }
@@ -701,12 +715,12 @@ export component MainWindow inherits Window {
                             Action { text: "›|"; triggered => {root.action("next");} }
                             Action { text: root.repeat-label; triggered => {root.action("repeat");} }
                         }
-                        HorizontalLayout { spacing: 9px; Text { text: root.elapsed; color: Design.subtle; font-size: 10px; width: 42px; vertical-alignment: center; } Slider { continuous: false; enabled: root.can-seek; minimum: 0; maximum: 1; value <=> root.progress; changed => {root.seek(self.value);} } Text { text: root.total; color: Design.subtle; font-size: 10px; width: 42px; vertical-alignment: center; } }
+                        HorizontalLayout { spacing: 9px; Text { text: root.elapsed; color: Design.subtle; font-size: 10px; width: 42px; vertical-alignment: center; } Slider { label: "Playback position"; continuous: false; enabled: root.can-seek; minimum: 0; maximum: 1; value <=> root.progress; changed => {root.seek(self.value);} } Text { text: root.total; color: Design.subtle; font-size: 10px; width: 42px; vertical-alignment: center; } }
                     }
                     if root.mobile: Action { text: root.playing ? "Ⅱ" : "▶"; light: true; width: 38px; triggered => {root.action("toggle");} }
                     if root.mobile: Action { text: "›|"; width: 32px; triggered => {root.action("next");} }
                     if !root.mobile: Action { text: "Expand"; triggered => {root.player-expanded=true;} }
-                    if !root.mobile: Slider { minimum: 0; maximum: 100; value <=> root.volume; preferred-width: 100px; horizontal-stretch: 0; changed => {root.set-volume(self.value);} }
+                    if !root.mobile: Slider { label: "Volume"; minimum: 0; maximum: 100; value <=> root.volume; preferred-width: 100px; horizontal-stretch: 0; changed => {root.set-volume(self.value);} }
                 }
             }
             if root.mobile: Rectangle {
@@ -733,7 +747,7 @@ export component MainWindow inherits Window {
                 VerticalLayout { spacing: 20px;
                     Cover { title: root.now-title; kind: "music"; artwork: root.now-artwork; width: root.mobile ? root.width - 40px : min(400px, (root.width - 120px) * 0.52); height: root.mobile ? min(300px,root.width - 40px) : 340px; vertical-stretch: 0; }
                     HorizontalLayout { VerticalLayout { Text { text: root.now-title; color: Design.text; font-size: 25px; font-weight: 700; overflow: elide; } Text { text: root.now-artist; color: Design.muted; font-size: 15px; overflow: elide; } } Action { text: root.current-favorite ? "♥" : "♡"; triggered => {root.action("favorite-current");} } }
-                    Slider { continuous: false; enabled: root.can-seek; minimum: 0; maximum: 1; value <=> root.progress; changed => {root.seek(self.value);} }
+                    Slider { label: "Playback position"; continuous: false; enabled: root.can-seek; minimum: 0; maximum: 1; value <=> root.progress; changed => {root.seek(self.value);} }
                     HorizontalLayout { Text { text: root.elapsed; color: Design.muted; font-size: 11px; } Rectangle {} Text { text: root.total; color: Design.muted; font-size: 11px; } }
                     HorizontalLayout { alignment: center; spacing: root.mobile ? 6px : 12px; Action { text: "−15s"; enabled: root.can-seek; triggered => {root.action("back15");} } Action { text: "|‹"; triggered => {root.action("previous");} } Action { text: root.playing ? "Ⅱ" : "▶"; light: true; height: 48px; triggered => {root.action("toggle");} } Action { text: "›|"; triggered => {root.action("next");} } Action { text: "+30s"; enabled: root.can-seek; triggered => {root.action("forward30");} } }
                     HorizontalLayout { spacing: 8px; Action { text: "Lyrics"; triggered => {root.show-lyrics=!root.show-lyrics;root.action("lyrics");} } Action { text: "Bookmark"; enabled: root.can-seek; triggered => {root.bookmark(root.bookmark-name == "" ? root.elapsed : root.bookmark-name);} } Rectangle {} }
@@ -741,7 +755,7 @@ export component MainWindow inherits Window {
                     if !root.mobile && root.show-lyrics: HorizontalLayout { Action { text: "Lyrics −0.5s"; triggered => {root.action("lyrics-earlier");} } Action { text: "Lyrics +0.5s"; triggered => {root.action("lyrics-later");} } Rectangle {} }
                     if !root.mobile && root.show-lyrics: Action { text: "Edit lyrics"; enabled: root.current-id != ""; triggered => {root.lyrics-edit-id=root.current-id;root.lyrics-draft=root.lyrics;root.lyrics-editor=true;} }
                 }
-                if !root.mobile: Rectangle { width: parent.width * 0.42; background: Design.canvas; VerticalLayout { spacing: 20px; Text { text: "Lyrics"; color: Design.text; font-size: 17px; } LyricsView { text: root.lyrics; rows: root.lyric-rows; active: root.active-lyric-index; seekable: root.can-seek; jump(index) => {root.seek-lyric(root.current-id,index);} } HorizontalLayout { LineEdit { text <=> root.bookmark-name; placeholder-text: "Bookmark name"; } Action { text: "Saved bookmarks"; triggered => {root.player-expanded=false;root.action("bookmarks");} } } } }
+                if !root.mobile: Rectangle { width: (root.width - 120px) * 0.42; background: Design.canvas; VerticalLayout { spacing: 20px; Text { text: "Lyrics"; color: Design.text; font-size: 17px; } LyricsView { text: root.lyrics; rows: root.lyric-rows; active: root.active-lyric-index; seekable: root.can-seek; jump(index) => {root.seek-lyric(root.current-id,index);} } HorizontalLayout { LineEdit { text <=> root.bookmark-name; placeholder-text: "Bookmark name"; } Action { text: "Saved bookmarks"; triggered => {root.player-expanded=false;root.action("bookmarks");} } } } }
             }
             Text { text: root.status; color: Design.muted; wrap: word-wrap; }
         }
@@ -784,7 +798,8 @@ export component MainWindow inherits Window {
             LineEdit { text <=> root.station-language; placeholder-text: "Language"; height: 40px; }
             LineEdit { text <=> root.station-tags; placeholder-text: "Genre / tags"; height: 40px; }
             LineEdit { text <=> root.station-logo; placeholder-text: "Logo URL (optional)"; height: 40px; }
-            HorizontalLayout { Action { text: "Save station"; light: true; triggered => {root.save-station(root.station-id,root.station-name,root.station-url,root.station-country,root.station-language,root.station-tags,root.station-logo);} } Action { text: "Cancel"; triggered => {root.radio-editor=false;} } if root.station-id != "": Action { text: "Delete custom"; triggered => {root.delete-station(root.station-id);} } Rectangle {} }
+            HorizontalLayout { Action { text: "Save station"; light: true; triggered => {root.save-station(root.station-id,root.station-name,root.station-url,root.station-country,root.station-language,root.station-tags,root.station-logo);} } Action { text: "Cancel"; triggered => {root.radio-editor=false;} } Rectangle {} }
+            if root.station-id != "": Action { text: "Delete custom"; triggered => {root.delete-station(root.station-id);} }
             Text { text: "Edits stay in your local collection. Public directory records are never changed."; color: Design.muted; wrap: word-wrap; }
         } }
     }
