@@ -69,9 +69,31 @@ jobs:
           python3 tests/verify_ios_simulator.py dist/ios-simulator/Payload/Auvemir.app
       - name: Inspect iOS package
         run: |
-          plutil -lint dist/ios/Payload/Auvemir.app/Info.plist
-          codesign --verify --deep --strict dist/ios/Payload/Auvemir.app
-          file dist/ios/Payload/Auvemir.app/Auvemir
+          auvemir_inspection="$(mktemp -d)"
+          ditto -x -k dist/Auvemir-ios-unsigned.ipa "$auvemir_inspection"
+          auvemir_apps=("$auvemir_inspection"/Payload/*.app)
+          [[ "${#auvemir_apps[@]}" == 1 && -d "${auvemir_apps[0]}" ]]
+          auvemir_app="${auvemir_apps[0]}"
+          plutil -lint "$auvemir_app/Info.plist"
+          auvemir_executable="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$auvemir_app/Info.plist")"
+          [[ -n "$auvemir_executable" && "$auvemir_executable" != */* ]]
+          test -f "$auvemir_app/$auvemir_executable"
+          xcrun lipo -verify_arch arm64 "$auvemir_app/$auvemir_executable"
+          file "$auvemir_app/$auvemir_executable"
+          python3 - "$auvemir_app/Info.plist" <<'PY'
+          import plistlib
+          import sys
+          from pathlib import Path
+          actual = plistlib.loads(Path(sys.argv[1]).read_bytes())
+          expected = plistlib.loads(Path("platforms/ios/Info.plist").read_bytes())
+          for key in ("CFBundleIdentifier", "CFBundleShortVersionString", "CFBundleVersion", "MinimumOSVersion"):
+              if actual.get(key) != expected[key]:
+                  raise SystemExit(f"Incorrect {key}: {actual.get(key)!r}; expected {expected[key]!r}")
+          if actual.get("CFBundlePackageType") != "APPL":
+              raise SystemExit("The IPA does not contain an application bundle")
+          PY
+          # The device IPA is intentionally unsigned; verify the ad hoc simulator bundle.
+          codesign --verify --deep --strict dist/ios-simulator/Payload/Auvemir.app
       - uses: actions/upload-artifact@v4
         with:
           name: auvemir-ios-unsigned
