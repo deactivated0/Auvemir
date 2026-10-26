@@ -37,7 +37,7 @@ jobs:
           if run["status"] != "completed" or run["head_repository"]["full_name"] != repo or run["head_branch"] != "Main":
               raise SystemExit("Artifacts must come from a completed Main run in this repository")
           comparison = api(f"compare/{run['head_sha']}...{os.environ['AUVEMIR_VERIFY_SHA']}")
-          allowed = {".github/workflows/finalize.yml", "tests/verify_ios_simulator.py", "tests/ios_sim_decoder.py"}
+          allowed = {".github/workflows/finalize.yml", "tests/verify_ios_simulator.py", "tests/ios_sim_decoder.py", "tests/verify_desktop.py"}
           changed = [item["filename"] for item in comparison["files"]]
           if comparison["status"] not in ("ahead", "identical") or len(changed) >= 300 or any(path not in allowed for path in changed):
               raise SystemExit(f"Application source differs from the retained binaries: {changed}")
