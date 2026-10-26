@@ -3,6 +3,7 @@
 import argparse
 import json
 import os
+import plistlib
 from pathlib import Path
 import subprocess
 import time
@@ -24,11 +25,16 @@ def main():
         report['launch']=True
         run(['xcrun','simctl','io',device,'screenshot',ROOT/'docs/ios-simulator.png'])
         container=subprocess.check_output(['xcrun','simctl','get_app_container',device,'org.auvemir.app','data'],text=True).strip()
+        app_container=Path(subprocess.check_output(['xcrun','simctl','get_app_container',device,'org.auvemir.app','app'],text=True).strip())
+        info=plistlib.loads((app_container/'Info.plist').read_bytes())
+        executable=app_container/info['CFBundleExecutable']
+        run(['xcrun','simctl','terminate',device,'org.auvemir.app'])
         wrapper=ROOT/'target/ios-sim-decoder';wrapper.parent.mkdir(exist_ok=True)
         wrapper.write_text((ROOT/'tests/ios_sim_decoder.py').read_text());wrapper.chmod(0o700)
-        env={**os.environ,'AUVEMIR_SIMULATOR_ID':device,'AUVEMIR_SIMULATOR_DATA':container}
+        env={**os.environ,'AUVEMIR_SIMULATOR_ID':device,'AUVEMIR_SIMULATOR_DATA':container,'AUVEMIR_SIMULATOR_EXECUTABLE':str(executable)}
         run(['python3',ROOT/'tests/verify_codecs.py',wrapper,'--report',ROOT/'docs/ios-codec-results.json'],env=env)
         report['native_codecs']=True
+        report['codec_execution']='Installed application executable via simctl spawn; UI launch checked separately'
     finally:
         (ROOT/'docs/ios-simulator-results.json').write_text(json.dumps(report,indent=2)+'\n')
         subprocess.run(['xcrun','simctl','terminate',device,'org.auvemir.app'],check=False,capture_output=True)
