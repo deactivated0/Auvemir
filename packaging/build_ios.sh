@@ -8,15 +8,17 @@ if [[ "$auvemir_mode" != --device && "$auvemir_mode" != --simulator ]]; then
 fi
 if [[ "$(uname -s)" == Darwin && "${AUVEMIR_IOS_USE_XTOOL:-0}" == 1 && "$auvemir_mode" == --device ]]; then
   command -v xtool >/dev/null
+  auvemir_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+  export AUVEMIR_IOS_LIB_DIR="$auvemir_root/target/aarch64-apple-ios/release"
   export SDKROOT="${SDKROOT:-$(xcrun --sdk iphoneos --show-sdk-path)}"
   export IPHONEOS_DEPLOYMENT_TARGET=17.0
   export BINDGEN_EXTRA_CLANG_ARGS_aarch64_apple_ios="${BINDGEN_EXTRA_CLANG_ARGS_aarch64_apple_ios:-${BINDGEN_EXTRA_CLANG_ARGS:-}} --target=arm64-apple-ios17.0 -isysroot \"$SDKROOT\""
   rustup target add aarch64-apple-ios
   cargo rustc --locked --release -p auvemir --lib --crate-type staticlib --target aarch64-apple-ios -j 2
-  (cd platforms/ios && xtool dev build --configuration release --ipa)
-  test -f platforms/ios/xtool/Auvemir.ipa
-  mkdir -p dist
-  cp platforms/ios/xtool/Auvemir.ipa dist/Auvemir-ios-unsigned.ipa
+  (cd "$auvemir_root/platforms/ios" && xtool dev build --configuration release --ipa)
+  test -f "$auvemir_root/platforms/ios/xtool/Auvemir.ipa"
+  mkdir -p "$auvemir_root/dist"
+  cp "$auvemir_root/platforms/ios/xtool/Auvemir.ipa" "$auvemir_root/dist/Auvemir-ios-unsigned.ipa"
   echo 'Built the iOS package with xtool. A provisioning profile and signing identity are required for device installation.'
   exit 0
 fi
